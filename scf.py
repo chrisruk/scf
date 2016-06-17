@@ -25,7 +25,7 @@ y = np.fromfile("/tmp/out.dat", dtype=np.complex64)
 d = collections.deque(maxlen=5)
 
 # Number of frames
-N = 50
+N = 100
 
 al = 1*Fs
 n = 0
@@ -42,8 +42,11 @@ mx = len(Sxf)
 print("Mx",mx)
 
 
+alph = []
+
 for a in range(0,20,1):
     al = (a/20.0) * Fs
+    alph.append(a/20.0)
     print("Alph",al)
     
     T = int(len(y) / N)
@@ -60,8 +63,8 @@ for a in range(0,20,1):
         xfm = np.append(xf,[0]*int(al/2))
         np.set_printoptions(threshold=np.nan)
         
-        #Sxf = (1/T) * xfp * np.conj(xfm)
-        Sxf = xfp * np.conj(xfm)
+        Sxf = (1/T) * xfp * np.conj(xfm)
+        #Sxf = xfp * np.conj(xfm)
     
         orig = len(Sxf)
         Sxf.resize((mx,))
@@ -87,18 +90,19 @@ for a in range(0,20,1):
 za = np.array(za)
 nx, ny = za.shape[1], za.shape[0]
 x = range(nx)
-y = range(ny)
+y = alph
+#print("X",x)
+#y = range(ny)
 
-data = numpy.random.random((ny, nx))
-print(data.shape)
 hf = plt.figure()
 ha = hf.add_subplot(111, projection='3d')
 
+ha.set_xlabel('Frequency')
+ha.set_ylabel('Alpha')
+ha.set_zlabel('SCF (Need to normalise)')
+
 X, Y = numpy.meshgrid(x, y)  # `plot_surface` expects `x` and `y` data to be 2D
 
-print(X.shape)
-print(Y.shape)
-print(data.shape)
 ha.plot_surface(X, Y, za,rstride=1, cstride=1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
 #ha.plot_wireframe(X,Y,za)
 plt.show()
