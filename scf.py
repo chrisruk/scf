@@ -17,8 +17,6 @@ from itertools import islice
 
 za = []
 y = np.fromfile("/tmp/out.dat", dtype=np.complex64)
-plt.plot(y)
-plt.show()
 
 d = collections.deque(maxlen=10)
 
@@ -35,12 +33,7 @@ xfp = np.append([0]*int(al/2),xf)
 xfm = np.append(xf,[0]*int(al/2))
 Sxf = (1/T) * xfp * np.conj(xfm)
 Sxf = Sxf * (np.e**-(1j*2*np.pi*al*(N*T)))
-
 mx = len(Sxf)
-
-print("Mx",mx)
-
-
 alph = []
 
 for a in np.arange(0,1,0.05):
@@ -58,7 +51,6 @@ for a in np.arange(0,1,0.05):
 
         count = n
         frame = y[int(n*T):int(n*T)+T]
-        print("Frame ",int(n*T),int(n*T)+T)
         xf = np.fft.fftshift(np.fft.fft(frame))
         xfp = np.append([0]*int(al/2),xf)
         xfm = np.append(xf,[0]*int(al/2))
