@@ -23,7 +23,7 @@ d = collections.deque(maxlen=10)
 N = 100             # Number of frames
 T = int(len(y) / N) # Frame length
 
-Fs = T*2
+Fs = T #*2
 al = 1*Fs
 n = 0
 
@@ -39,7 +39,7 @@ alph = []
 for a in np.arange(0,1,0.05):
 
 
-    Fs = T*2
+    Fs = T #*2
     al = a * Fs
     alph.append(a)
     print("Alph",al)
