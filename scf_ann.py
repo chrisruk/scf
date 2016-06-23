@@ -89,7 +89,7 @@ def scf(datfile):
         smoothed = np.mean(np.array(d),axis=0)
 
         za.append(smoothed)
-        
+        break 
     out = np.array(np.array(za).flatten())
     o = (out/out.max())
     o2 = []
@@ -101,7 +101,6 @@ def scf(datfile):
     return np.array(o2)
 
 gfsk_tr = scf("/tmp/gfsk_tr.dat")
-print("Out",gfsk_tr)
 psk_tr = scf("/tmp/psk_tr.dat")
 
 gfsk_te = scf("/tmp/gfsk_te.dat")
