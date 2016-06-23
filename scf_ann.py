@@ -89,7 +89,8 @@ def scf(datfile):
         smoothed = np.mean(np.array(d),axis=0)
 
         za.append(smoothed)
-        break 
+        break
+ 
     out = np.array(np.array(za).flatten())
     o = (out/out.max())
     o2 = []
@@ -124,8 +125,8 @@ with tf.Graph().as_default():
 
     # Testing
     print("Testing XOR operator")
-    print("0 xor 0:", m.predict([gfsk_te]))
-    print("0 xor 1:", m.predict([psk_te]))
+    print("GFSK test:", m.predict([gfsk_te]))
+    print("PSK  test:", m.predict([psk_te]))
 """
 za = np.array(za)
 nx, ny = za.shape[1], za.shape[0]
