@@ -124,7 +124,6 @@ with tf.Graph().as_default():
     m.fit(X, Y_xor, n_epoch=10000, snapshot_epoch=False) 
 
     # Testing
-    print("Testing XOR operator")
     print("GFSK test:", m.predict([gfsk_te]))
     print("PSK  test:", m.predict([psk_te]))
 """
