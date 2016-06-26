@@ -1,6 +1,4 @@
 #!/usr/bin/env python2
-
-
 from gnuradio import gr
 from gnuradio import audio, analog
 from gnuradio import digital
@@ -70,11 +68,7 @@ class my_top_block(gr.top_block):
         self.blocks_throttle_0 = blocks.throttle(gr.sizeof_gr_complex*1, samp_rate,True)
         self.blocks_stream_to_vector_0 = blocks.stream_to_vector(gr.sizeof_gr_complex*1, 1024)
         self.blocks_null_sink_0 = blocks.null_sink(gr.sizeof_float*1)
-
-        # 10 is amplitude 
         self.analog_noise_source_x_0 = analog.noise_source_c(analog.GR_GAUSSIAN, snrv[snr][1], 0)
-
-        #self.blocks_file_source_0 = blocks.file_source(gr.sizeof_char*1, "/tmp/packet.dat", False)
 
         self.analog_random_source_x_0 = blocks.vector_source_b(map(int, numpy.random.randint(0, 256, 10000)), False)
 
@@ -90,36 +84,16 @@ class my_top_block(gr.top_block):
 
         self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, "/tmp/train/%s-snr%d.dat" % (modulation,snr), False)
 
-        #self.connect((self.blocks_file_source_0, 0), (self.digital_mod, 0))   
-
-        
-
         self.connect((self.analog_noise_source_x_0, 0), (self.blocks_add_xx_1, 1))    
         self.connect((self.blocks_multiply_const_vxx_3, 0), (self.blocks_add_xx_1, 0))    
-
- 
         self.connect((self.analog_random_source_x_0, 0), (self.blks2_packet_encoder_0, 0))  
         self.connect((self.blks2_packet_encoder_0, 0), (self.digital_mod, 0)) 
-
-
-  
         self.connect((self.digital_mod, 0), (self.blocks_throttle_0, 0))   
         self.connect((self.blocks_throttle_0, 0),(self.blocks_multiply_const_vxx_3, 0))    
- 
         self.connect((self.blocks_add_xx_1, 0),(self.blocks_file_sink_0, 0))    
-
-
-
-""" 
-        self.connect((self.blocks_stream_to_vector_0, 0), (self.inspector_scf_0, 0))    
-        self.connect((self.blocks_throttle_0, 0), (self.blocks_stream_to_vector_0, 0))    
-        self.connect((self.digital_mod, 0), (self.blocks_throttle_0, 0))    
-        self.connect((self.inspector_scf_0, 0), (self.blocks_null_sink_0, 0))  
-"""
 
 """ 
 def worker(modulation):
-
     print("Done?")
 """
 
@@ -141,12 +115,6 @@ if __name__ == '__main__':
                 tb.start()
                 time.sleep(20)
                 tb.stop()
-        #self.tb.wait()
-        print("here")
-
-        
-        quit()
-
     except [[KeyboardInterrupt]]:
         pass
 
