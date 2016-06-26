@@ -92,22 +92,8 @@ class my_top_block(gr.top_block):
         self.connect((self.blocks_throttle_0, 0),(self.blocks_multiply_const_vxx_3, 0))    
         self.connect((self.blocks_add_xx_1, 0),(self.blocks_file_sink_0, 0))    
 
-""" 
-def worker(modulation):
-    print("Done?")
-"""
-
 if __name__ == '__main__':
     try:
-        ##t = threading.Thread(target=worker,args=("psk",))
-        #t.start()
-        #t.join()
-        #tb = my_top_block("psk")
-        #tb.run()
-        #time.sleep(1)
-        #tb.wait()
-        #tb.stop()
-
         for m in ["2psk","4psk","8psk","fsk"]:
 
             for snr in range(0,9):
