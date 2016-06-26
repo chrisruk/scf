@@ -24,11 +24,6 @@ import glob
 def graph(za):
     
     nx, ny = za.shape[1], za.shape[0]
-
-    print("Out",nx,ny)
-    #x = np.arange(0.5,-0.5,-1/ny)
-    #y = np.arange(0.0,1.0,1.0/nx)
-
     x = np.arange(0,nx)
     y = np.arange(0,ny)
 
@@ -43,8 +38,6 @@ def graph(za):
 
     ha.plot_surface(X, Y, za,rstride=1, cstride=1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
     plt.show()
-
-
 
 def scf(datfile):
 
@@ -115,43 +108,13 @@ def scf(datfile):
 
         za.append(smoothed)
  
-    out = np.array(za) #.flatten())
+    out = np.array(za) 
     o = (out/out.max())
     o[o == np.inf] = 0
 
-    #return np.reshape(o,o.shape+(1,))
     return o
 
 print("Loading data")
-
-"""
-gfsk_tr = scf("/tmp/gfsk_tr.dat")
-print("Out shape",gfsk_tr.shape)
-psk_tr = scf("/tmp/psk_tr.dat")
-qpsk_tr = scf("/tmp/qpsk_tr.dat")
-
-
-#print("Shape ",np.array(za).shape)
-plot.imshow(gfsk_tr,aspect='auto' ,cmap='hot')
-plot.show()
-quit()
-
-
-gfsk_te = scf("/tmp/gfsk_te.dat")
-psk_te = scf("/tmp/psk_te.dat")
-qpsk_te = scf("/tmp/qpsk_te.dat")
-
-
-graph(gfsk_tr)
-graph(gfsk_te)
-
-graph(psk_tr)
-graph(psk_te)
-
-graph(qpsk_tr)
-graph(qpsk_te)
-"""
-
 
 train = []
 train_out = []
@@ -170,7 +133,6 @@ for m in mod :
         train.append(scf("train/%s-snr%d.dat" % (m,i)))
         train_out.append(z)
         break
-        #graph(train[len(train)-1])
     count = count + 1
 
 count = 0
@@ -181,15 +143,10 @@ for m in mod :
     for i in range(0,9):
         valid.append(scf("train-0/%s-snr%d.dat" % (m,i)))
         valid_out.append(z)
-
     count = count + 1
-
-
-print(len(train_out),len(train))
 
 print("Tensor flow starting")
 
-# Graph definition
 for i in np.arange(0.5,3,0.05):
     print("i val",i)
     with tf.Graph().as_default():
@@ -198,55 +155,15 @@ for i in np.arange(0.5,3,0.05):
         net = tflearn.input_data(shape=[None,train[0].shape[0],train[0].shape[1]])
         #net = tflearn.conv_2d(net, 32 ,1, activation='relu')
         #net = tflearn.max_pool_2d(net, 2)
-
         net = tflearn.fully_connected(net, int(((train[0].shape[1]*train[0].shape[0])+3.0)/i), activation='softmax')
         #net = tflearn.fully_connected(net, int(((train[0].shape[1]*train[0].shape[0])+3.0)/i), activation='softmax')
-
         #net = tflearn.fully_connected(net, int(gfsk_tr.shape[1]*gfsk_tr.shape[0]*0.6), activation='softmax')
-
         #net = tflearn.dropout(net, 0.5)
         net = tflearn.fully_connected(net, len(mod), activation='softmax')
-
         regressor = tflearn.regression(net, optimizer='adam', learning_rate=0.001, loss='categorical_crossentropy')
-
         # Training
         m = tflearn.DNN(regressor,tensorboard_verbose=3)
         m.fit(train, train_out,validation_set = (valid,valid_out), n_epoch=4000, snapshot_epoch=False,show_metric=True) 
 
-        # Testing
-        """
-        print("GFSK test:", m.predict([gfsk_te]))
-        print("PSK  test:", m.predict([psk_te]))
-        print("QPSK  test:",m.predict([qpsk_te]))
-        """
 
-"""
-za = np.array(za)
-nx, ny = za.shape[1], za.shape[0]
-x = np.arange(0.5,-0.5,-1/mx)
-y = alph
-
-hf = plt.figure()
-ha = hf.add_subplot(111, projection='3d')
-
-ha.set_xlabel('Frequency')
-ha.set_ylabel('Alpha')
-ha.set_zlabel('SCF')
-
-X, Y = numpy.meshgrid(x, y) 
-
-ha.plot_surface(X, Y, za,rstride=1, cstride=1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
-plt.show()
-quit()
-
-print("Shape ",np.array(za).shape)
-plot.imshow(za,aspect='auto' ,cmap='hot')
-plot.show()
-
-myplot[1].plot(frq,abs(Y),'r') # plotting the spectrum
-myplot[1].set_xlabel('Freq (Hz)')
-myplot[1].set_ylabel('|Y(freq)|')
-
-plt.show()
-"""
 
