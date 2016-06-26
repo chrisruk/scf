@@ -17,6 +17,7 @@ from itertools import islice
 
 za = []
 y = np.fromfile("/tmp/out.dat", dtype=np.complex64)
+y = y[0:1024*100]
 
 d = collections.deque(maxlen=10)
 

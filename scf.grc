@@ -203,7 +203,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(824, 206)</value>
+      <value>(856, 62)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -301,7 +301,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(648, 220)</value>
+      <value>(664, 76)</value>
     </param>
     <param>
       <key>_rotation</key>
@@ -356,7 +356,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>0</value>
+      <value>1</value>
     </param>
     <param>
       <key>_coordinate</key>
@@ -415,7 +415,7 @@
     </param>
     <param>
       <key>_enabled</key>
-      <value>1</value>
+      <value>0</value>
     </param>
     <param>
       <key>excess_bw</key>
@@ -423,7 +423,7 @@
     </param>
     <param>
       <key>_coordinate</key>
-      <value>(384, 272)</value>
+      <value>(400, 256)</value>
     </param>
     <param>
       <key>_rotation</key>
