@@ -47,7 +47,7 @@ def scf(datfile):
 
     d = collections.deque(maxlen=10)
 
-    N = 1000#3000             # Number of frames
+    N = 2000#3000             # Number of frames
     T = int(len(y) / N) # Frame length
     print("Flen",T)
     Fs = T #*2
@@ -132,6 +132,8 @@ for m in mod :
     for i in range(0,9):
         train.append(scf("train/%s-snr%d.dat" % (m,i)))
         train_out.append(z)
+        print("Mod",m)
+        graph(train[len(train)-1])
         break
     count = count + 1
 
@@ -155,15 +157,17 @@ for i in np.arange(0.5,3,0.05):
         net = tflearn.input_data(shape=[None,train[0].shape[0],train[0].shape[1]])
         #net = tflearn.conv_2d(net, 32 ,1, activation='relu')
         #net = tflearn.max_pool_2d(net, 2)
-        net = tflearn.fully_connected(net, int(((train[0].shape[1]*train[0].shape[0])+3.0)/i), activation='softmax')
+        net = tflearn.fully_connected(net, int(((train[0].shape[1]*train[0].shape[0])+float(len(mod)))/i), activation='softmax')
         #net = tflearn.fully_connected(net, int(((train[0].shape[1]*train[0].shape[0])+3.0)/i), activation='softmax')
         #net = tflearn.fully_connected(net, int(gfsk_tr.shape[1]*gfsk_tr.shape[0]*0.6), activation='softmax')
         #net = tflearn.dropout(net, 0.5)
         net = tflearn.fully_connected(net, len(mod), activation='softmax')
-        regressor = tflearn.regression(net, optimizer='adam', learning_rate=0.001, loss='categorical_crossentropy')
+        #adam = tflearn.Adam(learning_rate=0.01, beta1=0.99,beta2=0.99,epsilon=0.000000000001)
+        #sgd = tflearn.SGD(learning_rate=0.01, lr_decay=0.96, decay_step=10)
+        regressor = tflearn.regression(net, optimizer='adam', learning_rate=0.01, loss='categorical_crossentropy')
         # Training
         m = tflearn.DNN(regressor,tensorboard_verbose=3)
-        m.fit(train, train_out,validation_set = (valid,valid_out), n_epoch=4000, snapshot_epoch=False,show_metric=True) 
+        m.fit(train, train_out,validation_set = (valid,valid_out), n_epoch=500, snapshot_epoch=False,show_metric=True) 
 
 
 
