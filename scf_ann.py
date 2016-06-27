@@ -47,7 +47,7 @@ def scf(datfile):
 
     d = collections.deque(maxlen=10)
 
-    N = 2000#3000             # Number of frames
+    N = 3000#3000             # Number of frames
     T = int(len(y) / N) # Frame length
     print("Flen",T)
     Fs = T #*2
@@ -134,7 +134,7 @@ for m in mod :
         train_out.append(z)
         print("Mod",m)
         #graph(train[len(train)-1])
-        break
+        #break
     count = count + 1
 
 count = 0
@@ -163,7 +163,7 @@ with tf.Graph().as_default():
     net = tflearn.input_data(shape=[None,train[0].shape[0],train[0].shape[1]])
     net = tflearn.fully_connected(net, hidden,activation='sigmoid') #, activation='sigmoid')
     net = tflearn.fully_connected(net, len(mod), activation='softmax')
-    sgd = tflearn.SGD(learning_rate=0.001)   
-    regressor = tflearn.regression(net, optimizer=sgd,loss='categorical_crossentropy') #, loss=lossv)
+    #sgd = tflearn.SGD(learning_rate=0.001)   
+    regressor = tflearn.regression(net, optimizer='adam',loss='categorical_crossentropy') #, loss=lossv)
     m = tflearn.DNN(regressor,tensorboard_verbose=3)
     m.fit(train, train_out, n_epoch=1000, snapshot_epoch=False,show_metric=True)
