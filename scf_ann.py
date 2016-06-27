@@ -130,10 +130,10 @@ for m in mod :
     z[count] = 1
 
     for i in range(0,9):
-        train.append(scf("train/%s-snr%d.dat" % (m,i)))
+        train.append(scf("data/train/%s-snr%d.dat" % (m,i)))
         train_out.append(z)
         print("Mod",m)
-        graph(train[len(train)-1])
+        #graph(train[len(train)-1])
         break
     count = count + 1
 
@@ -143,31 +143,27 @@ for m in mod :
     z[count] = 1
 
     for i in range(0,9):
-        valid.append(scf("train-0/%s-snr%d.dat" % (m,i)))
+        valid.append(scf("data/train-0/%s-snr%d.dat" % (m,i)))
         valid_out.append(z)
     count = count + 1
 
 print("Tensor flow starting")
 
-for i in np.arange(0.5,3,0.05):
-    print("i val",i)
-    with tf.Graph().as_default():
-        tflearn.init_graph(num_cores=4)
-        tnorm = tflearn.initializations.uniform(minval=0.0, maxval=1.0)
-        net = tflearn.input_data(shape=[None,train[0].shape[0],train[0].shape[1]])
-        #net = tflearn.conv_2d(net, 32 ,1, activation='relu')
-        #net = tflearn.max_pool_2d(net, 2)
-        net = tflearn.fully_connected(net, int(((train[0].shape[1]*train[0].shape[0])+float(len(mod)))/i), activation='softmax')
-        #net = tflearn.fully_connected(net, int(((train[0].shape[1]*train[0].shape[0])+3.0)/i), activation='softmax')
-        #net = tflearn.fully_connected(net, int(gfsk_tr.shape[1]*gfsk_tr.shape[0]*0.6), activation='softmax')
-        #net = tflearn.dropout(net, 0.5)
-        net = tflearn.fully_connected(net, len(mod), activation='softmax')
-        #adam = tflearn.Adam(learning_rate=0.01, beta1=0.99,beta2=0.99,epsilon=0.000000000001)
-        #sgd = tflearn.SGD(learning_rate=0.01, lr_decay=0.96, decay_step=10)
-        regressor = tflearn.regression(net, optimizer='adam', learning_rate=0.01, loss='categorical_crossentropy')
-        # Training
-        m = tflearn.DNN(regressor,tensorboard_verbose=3)
-        m.fit(train, train_out,validation_set = (valid,valid_out), n_epoch=500, snapshot_epoch=False,show_metric=True) 
+print(train[0])
+print(train_out)
 
 
 
+inputs = train[0].shape[0]*train[0].shape[1]
+hidden = int(inputs * (2.0/3.0))
+print("Inputs ",inputs,"Hidden ", hidden)
+
+with tf.Graph().as_default():
+    tflearn.init_graph(num_cores=8)
+    net = tflearn.input_data(shape=[None,train[0].shape[0],train[0].shape[1]])
+    net = tflearn.fully_connected(net, hidden,activation='sigmoid') #, activation='sigmoid')
+    net = tflearn.fully_connected(net, len(mod), activation='softmax')
+    sgd = tflearn.SGD(learning_rate=0.001)   
+    regressor = tflearn.regression(net, optimizer=sgd,loss='categorical_crossentropy') #, loss=lossv)
+    m = tflearn.DNN(regressor,tensorboard_verbose=3)
+    m.fit(train, train_out, n_epoch=1000, snapshot_epoch=False,show_metric=True)
