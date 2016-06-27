@@ -39,15 +39,14 @@ def graph(za):
     ha.plot_surface(X, Y, za,rstride=1, cstride=1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
     plt.show()
 
-def scf(datfile):
+def scf(y):
 
     za = []
-    y = np.fromfile(datfile, dtype=np.complex64)
-    y = y[0:1024*50]
+
 
     d = collections.deque(maxlen=10)
-
-    N = 3000#3000             # Number of frames
+    y = y[0:1024*5]
+    N = 100#3000             # Number of frames
     T = int(len(y) / N) # Frame length
     print("Flen",T)
     Fs = T #*2
@@ -122,6 +121,9 @@ train_out = []
 valid = []
 valid_out = []
 
+test = []
+test_out = []
+
 mod = ["2psk","4psk","8psk","fsk"]
 
 count = 0
@@ -130,12 +132,36 @@ for m in mod :
     z[count] = 1
 
     for i in range(0,9):
-        train.append(scf("data/train/%s-snr%d.dat" % (m,i)))
-        train_out.append(z)
-        print("Mod",m)
+    
+        y = np.fromfile("data/train/%s-snr%d.dat" % (m,i), dtype=np.complex64)
+        y = np.array_split(y,int(len(y)/(1024*5)))
+
+        y2 = np.fromfile("data/train-0/%s-snr%d.dat" % (m,i), dtype=np.complex64)
+        y2 = np.array_split(y2,int(len(y2)/(1024*5)))
+
+        c=0
+        for q in y:
+            train.append(scf(q[0:1024*5]))
+            train_out.append(z)
+            print("Mod",m,":",i,": ",c)
+            c = c + 1
+
+        c=0
+        for q in y2:
+            test.append(scf(q[0:1024*5]))
+            test_out.append(z)
+            print("Mod",m,":",i,": ",c)
+            c = c + 1
+
         #graph(train[len(train)-1])
         #break
     count = count + 1
+print("out",len(train_out))
+
+"""
+train = [val for val in train for _ in (0, 1)]
+train_out = [val for val in train_out for _ in (0, 1)]
+
 
 count = 0
 for m in mod :
@@ -146,17 +172,23 @@ for m in mod :
         valid.append(scf("data/train-0/%s-snr%d.dat" % (m,i)))
         valid_out.append(z)
     count = count + 1
+"""
 
 print("Tensor flow starting")
 
-print(train[0])
-print(train_out)
-
+print(train[0].shape)
 
 
 inputs = train[0].shape[0]*train[0].shape[1]
 hidden = int(inputs * (2.0/3.0))
 print("Inputs ",inputs,"Hidden ", hidden)
+
+
+def thresh(i):
+    if i >= 0.5:
+        return 1
+    else: 
+        return 0
 
 with tf.Graph().as_default():
     tflearn.init_graph(num_cores=8)
@@ -166,4 +198,16 @@ with tf.Graph().as_default():
     #sgd = tflearn.SGD(learning_rate=0.001)   
     regressor = tflearn.regression(net, optimizer='adam',loss='categorical_crossentropy') #, loss=lossv)
     m = tflearn.DNN(regressor,tensorboard_verbose=3)
-    m.fit(train, train_out, n_epoch=1000, snapshot_epoch=False,show_metric=True)
+    m.fit(train, train_out, n_epoch=100, snapshot_epoch=False,show_metric=True)
+
+    c = 0
+    correct = 0.0
+    for t in test:
+        o = []
+        for v in m.predict([t])[0]:
+            o.append(thresh(v))
+        if o == test_out[c].tolist():
+            correct += 1.0
+        c = c + 1
+
+    print ((correct/float(c))*100.0,"Number of items",c)
