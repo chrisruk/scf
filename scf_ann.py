@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 import glob
 import pickle
 
+snrv = ["20","15","10","5","0","-5","-10","-15","-20"] 
 
 # Load SCF training data from previously pickled file
 load_scf_training = True
@@ -38,7 +39,6 @@ mod = ["2psk","4psk","8psk","fsk"]
 
 # Load ANN from file 
 loadann = True
-
 
 # Generate a graph of SCF data
 def graph(za):
@@ -67,7 +67,7 @@ def scf(y):
     y = y[0:1024*5]
     N = 100#3000             # Number of frames
     T = int(len(y) / N) # Frame length
-    print("Flen",T)
+    #print("Flen",T)
     Fs = T #*2
     al = 1*Fs
     n = 0
@@ -132,6 +132,7 @@ def scf(y):
 
     return o
 
+
 """
 # Graph data
 
@@ -147,10 +148,10 @@ graph(scf(y))
 
 
 # Load dataset of different modulation schemes
-def load_data(path):
+def load_data(path,train):
 
-    out = []
-    out_o = []
+    out   = [[]]*9
+    out_o = [[]]*9
 
     count = 0
     for m in mod :
@@ -163,16 +164,25 @@ def load_data(path):
             y = np.fromfile("%s/%s-snr%d.dat" % (path,m,i), dtype=np.complex64)
             y = np.array_split(y,int(len(y)/(1024*5)))
 
+            print("loading %s/%s-snr%d.dat  " % (path,m,i))
             c=0
             for q in y:
-                out.append(scf(q[0:1024*5]))
-                out_o.append(z)
-                print("Mod",m,":",i,": ",c)
+                out[i].append(scf(q[0:1024*5]))
+                out_o[i].append(z)
+                #print("Mod",m,":",i,": ",c)
                 c += 1
+    
+            break
 
         count += 1
 
-    return (out,out_o)
+
+    if train:
+        o = [ x for y in out for x in y]
+        oo = [ x for y in out_o for x in y]
+        return (o,oo)        
+    else:
+        return (out,out_o)
 
 train = []
 train_out = []
@@ -185,8 +195,8 @@ if load_scf_training:
     train = pickle.load(open('train.dat', 'rb'))
     train_out = pickle.load(open('train_o.dat', 'rb'))
 else:
-    train,train_out = load_data("data/train-rnd1")
-    train2,train_out2 = load_data("data/train-rnd2")
+    train,train_out = load_data("data/train-rnd1",True)
+    train2,train_out2 = load_data("data/train-rnd2",True)
 
     train = train + train2
     train_out = train_out + train_out2
@@ -196,7 +206,8 @@ if load_scf_testing:
     test = pickle.load(open('test.dat', 'rb'))
     test_out = pickle.load(open('test_o.dat', 'rb'))
 else:
-    test,test_out = load_data("data/train-rnd3")
+    print("loading rnd 3 ")
+    test,test_out = load_data("data/train-rnd3",False)
 
 # Save SCF data to pickled files
 if save:
@@ -211,6 +222,7 @@ if save:
 
     with open('test_o.dat','w') as f:
         pickle.dump(test_out,f)
+
 
 
 print("Tensor flow starting")
@@ -236,25 +248,35 @@ with tf.Graph().as_default():
     regressor = tflearn.regression(net, optimizer='adam',learning_rate=0.001,loss='categorical_crossentropy') #, loss=lossv)
     m = tflearn.DNN(regressor,tensorboard_verbose=3)
 
-
     if loadann:
         m.load('ann.tflearn')
     else:
         m.fit(train, train_out, n_epoch=50, snapshot_epoch=False,show_metric=True)
 
-    # Is there a simple Tflearn evaluation function? 
-    c = 0
-    correct = 0.0
-    for t in test:
-        o = []
-        for v in m.predict([t])[0]:
-            o.append(thresh(v))
-        if o == test_out[c].tolist():
-            correct += 1.0
-        c = c + 1
+    # Is there a simple Tflearn evaluation function?
+
+    for snr in range(0,9):
+        tst = test[snr]
+        tstout = test_out[snr]
+
+        c = 0
+        correct = 0.0
+
+        for t in tst:
+            o = []
+
+            for v in m.predict([t])[0]:
+                o.append(thresh(v))
+
+            if o == tstout[c].tolist():
+                correct += 1.0
+            c = c + 1
+
+
+        # Print accuracy of classifier when run on test data
+        print ((correct/float(c))*100.0,snrv[snr],c)
+
    
     if not loadann: 
         m.save('ann.tflearn')
 
-    # Print accuracy of classifier when run on test data
-    print ((correct/float(c))*100.0,"Number of items",c)
