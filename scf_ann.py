@@ -23,19 +23,26 @@ import glob
 import pickle
 
 
+# Load SCF training data from previously pickled file
+load_scf_training = True
 
+# Load SCF testing data from previously pickled file
 
-# Load SCF data from previously pickled file
-load_scf = False
+load_scf_testing = False
 
 # Save SCF data to pickled file
 save = False
 
+# Modulation schemes
+mod = ["2psk","4psk","8psk","fsk"]
+
+
+# Generate a graph of SCF data
 def graph(za):
     
     nx, ny = za.shape[1], za.shape[0]
-    x = np.arange(0,nx)
-    y = np.arange(0,ny)
+    y = np.arange(0,1.0,1.0/ny)
+    x = np.arange(-0.5,0.5,1.0/nx)
 
     hf = plt.figure()
     ha = hf.add_subplot(111, projection='3d')
@@ -49,6 +56,7 @@ def graph(za):
     ha.plot_surface(X, Y, za,rstride=1, cstride=1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
     plt.show()
 
+# Generate 2D array of SCF data
 def scf(y):
 
     za = []
@@ -121,6 +129,21 @@ def scf(y):
 
     return o
 
+"""
+# Graph data
+
+# payload 90
+y = np.fromfile("data/train-2/fsk-snr0.dat", dtype=np.complex64)
+graph(scf(y))
+
+# payload 189
+y = np.fromfile("data/train-3/fsk-snr0.dat", dtype=np.complex64)
+graph(scf(y))
+
+"""
+
+
+# Load dataset of different modulation schemes
 def load_data(path):
 
     out = []
@@ -148,58 +171,52 @@ def load_data(path):
 
     return (out,out_o)
 
-
-mod = ["2psk","4psk","8psk","fsk"]
-
-print("Loading data")
 train = []
 train_out = []
-
-valid = []
-valid_out = []
 
 test = []
 test_out = []
 
-if load_scf:
+# Load pickled SCF training data
+if load_scf_training:
     train = pickle.load(open('train.dat', 'rb'))
     train_out = pickle.load(open('train_o.dat', 'rb'))
-    test = pickle.load(open('test.dat', 'rb'))
-    test_out = pickle.load(open('test_o.dat', 'rb'))
 else:
-
     train,train_out = load_data("data/train")
     train2,train_out2 = load_data("data/train-0")
 
     train = train + train2
     train_out = train_out + train_out2
 
-    test,test_out = load_data("data/train-2")
+# Load pickled SCF testing data
+if load_scf_testing:
+    test = pickle.load(open('test.dat', 'rb'))
+    test_out = pickle.load(open('test_o.dat', 'rb'))
+else:
+    test,test_out = load_data("data/train-3")
 
-    if save:
-        with open('train.dat','w') as f:
-            pickle.dump(train,f)
+# Save SCF data to pickled files
+if save:
+    with open('train.dat','w') as f:
+        pickle.dump(train,f)
 
-        with open('train_o.dat','w') as f:
-            pickle.dump(train_out,f)
+    with open('train_o.dat','w') as f:
+        pickle.dump(train_out,f)
 
-        with open('test.dat','w') as f:
-            pickle.dump(test,f)
+    with open('test.dat','w') as f:
+        pickle.dump(test,f)
 
-        with open('test_o.dat','w') as f:
-            pickle.dump(test_out,f)
+    with open('test_o.dat','w') as f:
+        pickle.dump(test_out,f)
 
 
 print("Tensor flow starting")
-
-print(train[0].shape)
-
-
 inputs = train[0].shape[0]*train[0].shape[1]
 hidden = int(inputs * (0.89))
 print("Inputs ",inputs,"Hidden ", hidden)
 
-
+# Hack - This could be improved likely, by using a built-in function to Tensor Flow, can't
+# seem to find one at the moment
 def thresh(i):
     if i >= 0.5:
         return 1
@@ -210,13 +227,12 @@ with tf.Graph().as_default():
     tflearn.init_graph(num_cores=8)
     net = tflearn.input_data(shape=[None,train[0].shape[0],train[0].shape[1]])
     net = tflearn.fully_connected(net, hidden,activation='sigmoid') #, activation='sigmoid')
-    #net = tflearn.fully_connected(net, int(hidden/4.0),activation='sigmoid') #, activation='sigmoid')
     net = tflearn.fully_connected(net, len(mod), activation='softmax')
-    #sgd = tflearn.SGD(learning_rate=0.001)   
     regressor = tflearn.regression(net, optimizer='adam',learning_rate=0.001,loss='categorical_crossentropy') #, loss=lossv)
     m = tflearn.DNN(regressor,tensorboard_verbose=3)
     m.fit(train, train_out, n_epoch=200, snapshot_epoch=False,show_metric=True)
 
+    # Is there a simple Tflearn evaluation function? 
     c = 0
     correct = 0.0
     for t in test:
@@ -227,4 +243,5 @@ with tf.Graph().as_default():
             correct += 1.0
         c = c + 1
 
+    # Print accuracy of classifier when run on test data
     print ((correct/float(c))*100.0,"Number of items",c)
