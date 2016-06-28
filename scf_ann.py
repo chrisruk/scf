@@ -28,11 +28,10 @@ snrv = ["20","15","10","5","0","-5","-10","-15","-20"]
 load_scf_training = True
 
 # Load SCF testing data from previously pickled file
-
-load_scf_testing = True
+load_scf_testing = False
 
 # Save SCF data to pickled file
-save = False
+save = True
 
 # Modulation schemes
 mod = ["2psk","4psk","8psk","fsk"]
@@ -169,11 +168,7 @@ def load_data(path,train):
             for q in y:
                 out[i].append(scf(q[0:1024*5]))
                 out_o[i].append(z)
-                #print("Mod",m,":",i,": ",c)
                 c += 1
-    
-            break
-
         count += 1
 
 
@@ -252,6 +247,10 @@ with tf.Graph().as_default():
         m.load('ann.tflearn')
     else:
         m.fit(train, train_out, n_epoch=50, snapshot_epoch=False,show_metric=True)
+
+
+    if test[0] == test[1]:
+        print("major issue")
 
     # Is there a simple Tflearn evaluation function?
 
