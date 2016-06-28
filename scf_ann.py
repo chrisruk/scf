@@ -28,10 +28,10 @@ snrv = ["20","15","10","5","0","-5","-10","-15","-20"]
 load_scf_training = True
 
 # Load SCF testing data from previously pickled file
-load_scf_testing = False
+load_scf_testing = True
 
 # Save SCF data to pickled file
-save = True
+save = False
 
 # Modulation schemes
 mod = ["2psk","4psk","8psk","fsk"]
@@ -149,8 +149,8 @@ graph(scf(y))
 # Load dataset of different modulation schemes
 def load_data(path,train):
 
-    out   = [[]]*9
-    out_o = [[]]*9
+    out = {k: [] for k in range(9)}
+    out_o = {k: [] for k in range(9)}
 
     count = 0
     for m in mod :
@@ -249,9 +249,6 @@ with tf.Graph().as_default():
         m.fit(train, train_out, n_epoch=50, snapshot_epoch=False,show_metric=True)
 
 
-    if test[0] == test[1]:
-        print("major issue")
-
     # Is there a simple Tflearn evaluation function?
 
     for snr in range(0,9):
@@ -273,7 +270,7 @@ with tf.Graph().as_default():
 
 
         # Print accuracy of classifier when run on test data
-        print ((correct/float(c))*100.0,snrv[snr],c)
+        print ("%f,%s,%d" % ((correct/float(c)*100.0),snrv[snr],c))
 
    
     if not loadann: 
