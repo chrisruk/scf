@@ -79,10 +79,10 @@ class my_top_block(gr.top_block):
         		access_code="",
         		pad_for_usrp=True,
         	),
-        	payload_length=20,
+        	payload_length=90,
         )
 
-        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, "/tmp/train/%s-snr%d.dat" % (modulation,snr), False)
+        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, "data/train-2/%s-snr%d.dat" % (modulation,snr), False)
 
         self.connect((self.analog_noise_source_x_0, 0), (self.blocks_add_xx_1, 1))    
         self.connect((self.blocks_multiply_const_vxx_3, 0), (self.blocks_add_xx_1, 0))    

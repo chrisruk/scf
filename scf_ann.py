@@ -20,6 +20,16 @@ import tflearn
 from scipy import signal
 import matplotlib.pyplot as plt
 import glob
+import pickle
+
+
+
+
+# Load SCF data from previously pickled file
+load_scf = False
+
+# Save SCF data to pickled file
+save = False
 
 def graph(za):
     
@@ -42,8 +52,6 @@ def graph(za):
 def scf(y):
 
     za = []
-
-
     d = collections.deque(maxlen=10)
     y = y[0:1024*5]
     N = 100#3000             # Number of frames
@@ -113,8 +121,37 @@ def scf(y):
 
     return o
 
-print("Loading data")
+def load_data(path):
 
+    out = []
+    out_o = []
+
+    count = 0
+    for m in mod :
+        
+        z = np.zeros((len(mod),))
+        z[count] = 1
+
+        for i in range(0,9):
+        
+            y = np.fromfile("%s/%s-snr%d.dat" % (path,m,i), dtype=np.complex64)
+            y = np.array_split(y,int(len(y)/(1024*5)))
+
+            c=0
+            for q in y:
+                out.append(scf(q[0:1024*5]))
+                out_o.append(z)
+                print("Mod",m,":",i,": ",c)
+                c += 1
+
+        count += 1
+
+    return (out,out_o)
+
+
+mod = ["2psk","4psk","8psk","fsk"]
+
+print("Loading data")
 train = []
 train_out = []
 
@@ -124,55 +161,34 @@ valid_out = []
 test = []
 test_out = []
 
-mod = ["2psk","4psk","8psk","fsk"]
+if load_scf:
+    train = pickle.load(open('train.dat', 'rb'))
+    train_out = pickle.load(open('train_o.dat', 'rb'))
+    test = pickle.load(open('test.dat', 'rb'))
+    test_out = pickle.load(open('test_o.dat', 'rb'))
+else:
 
-count = 0
-for m in mod :
-    z = np.zeros((len(mod),))
-    z[count] = 1
+    train,train_out = load_data("data/train")
+    train2,train_out2 = load_data("data/train-0")
 
-    for i in range(0,9):
-    
-        y = np.fromfile("data/train/%s-snr%d.dat" % (m,i), dtype=np.complex64)
-        y = np.array_split(y,int(len(y)/(1024*5)))
+    train = train + train2
+    train_out = train_out + train_out2
 
-        y2 = np.fromfile("data/train-0/%s-snr%d.dat" % (m,i), dtype=np.complex64)
-        y2 = np.array_split(y2,int(len(y2)/(1024*5)))
+    test,test_out = load_data("data/train-2")
 
-        c=0
-        for q in y:
-            train.append(scf(q[0:1024*5]))
-            train_out.append(z)
-            print("Mod",m,":",i,": ",c)
-            c = c + 1
+    if save:
+        with open('train.dat','w') as f:
+            pickle.dump(train,f)
 
-        c=0
-        for q in y2:
-            test.append(scf(q[0:1024*5]))
-            test_out.append(z)
-            print("Mod",m,":",i,": ",c)
-            c = c + 1
+        with open('train_o.dat','w') as f:
+            pickle.dump(train_out,f)
 
-        #graph(train[len(train)-1])
-        #break
-    count = count + 1
-print("out",len(train_out))
+        with open('test.dat','w') as f:
+            pickle.dump(test,f)
 
-"""
-train = [val for val in train for _ in (0, 1)]
-train_out = [val for val in train_out for _ in (0, 1)]
+        with open('test_o.dat','w') as f:
+            pickle.dump(test_out,f)
 
-
-count = 0
-for m in mod :
-    z = np.zeros((len(mod),))
-    z[count] = 1
-
-    for i in range(0,9):
-        valid.append(scf("data/train-0/%s-snr%d.dat" % (m,i)))
-        valid_out.append(z)
-    count = count + 1
-"""
 
 print("Tensor flow starting")
 
@@ -180,7 +196,7 @@ print(train[0].shape)
 
 
 inputs = train[0].shape[0]*train[0].shape[1]
-hidden = int(inputs * (2.0/3.0))
+hidden = int(inputs * (0.89))
 print("Inputs ",inputs,"Hidden ", hidden)
 
 
@@ -194,11 +210,12 @@ with tf.Graph().as_default():
     tflearn.init_graph(num_cores=8)
     net = tflearn.input_data(shape=[None,train[0].shape[0],train[0].shape[1]])
     net = tflearn.fully_connected(net, hidden,activation='sigmoid') #, activation='sigmoid')
+    #net = tflearn.fully_connected(net, int(hidden/4.0),activation='sigmoid') #, activation='sigmoid')
     net = tflearn.fully_connected(net, len(mod), activation='softmax')
     #sgd = tflearn.SGD(learning_rate=0.001)   
-    regressor = tflearn.regression(net, optimizer='adam',loss='categorical_crossentropy') #, loss=lossv)
+    regressor = tflearn.regression(net, optimizer='adam',learning_rate=0.001,loss='categorical_crossentropy') #, loss=lossv)
     m = tflearn.DNN(regressor,tensorboard_verbose=3)
-    m.fit(train, train_out, n_epoch=100, snapshot_epoch=False,show_metric=True)
+    m.fit(train, train_out, n_epoch=200, snapshot_epoch=False,show_metric=True)
 
     c = 0
     correct = 0.0
