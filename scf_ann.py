@@ -28,13 +28,16 @@ load_scf_training = True
 
 # Load SCF testing data from previously pickled file
 
-load_scf_testing = False
+load_scf_testing = True
 
 # Save SCF data to pickled file
 save = False
 
 # Modulation schemes
 mod = ["2psk","4psk","8psk","fsk"]
+
+# Load ANN from file 
+loadann = True
 
 
 # Generate a graph of SCF data
@@ -182,8 +185,8 @@ if load_scf_training:
     train = pickle.load(open('train.dat', 'rb'))
     train_out = pickle.load(open('train_o.dat', 'rb'))
 else:
-    train,train_out = load_data("data/train")
-    train2,train_out2 = load_data("data/train-0")
+    train,train_out = load_data("data/train-rnd1")
+    train2,train_out2 = load_data("data/train-rnd2")
 
     train = train + train2
     train_out = train_out + train_out2
@@ -193,7 +196,7 @@ if load_scf_testing:
     test = pickle.load(open('test.dat', 'rb'))
     test_out = pickle.load(open('test_o.dat', 'rb'))
 else:
-    test,test_out = load_data("data/train-3")
+    test,test_out = load_data("data/train-rnd3")
 
 # Save SCF data to pickled files
 if save:
@@ -223,6 +226,8 @@ def thresh(i):
     else: 
         return 0
 
+
+
 with tf.Graph().as_default():
     tflearn.init_graph(num_cores=8)
     net = tflearn.input_data(shape=[None,train[0].shape[0],train[0].shape[1]])
@@ -230,7 +235,12 @@ with tf.Graph().as_default():
     net = tflearn.fully_connected(net, len(mod), activation='softmax')
     regressor = tflearn.regression(net, optimizer='adam',learning_rate=0.001,loss='categorical_crossentropy') #, loss=lossv)
     m = tflearn.DNN(regressor,tensorboard_verbose=3)
-    m.fit(train, train_out, n_epoch=200, snapshot_epoch=False,show_metric=True)
+
+
+    if loadann:
+        m.load('ann.tflearn')
+    else:
+        m.fit(train, train_out, n_epoch=50, snapshot_epoch=False,show_metric=True)
 
     # Is there a simple Tflearn evaluation function? 
     c = 0
@@ -242,6 +252,9 @@ with tf.Graph().as_default():
         if o == test_out[c].tolist():
             correct += 1.0
         c = c + 1
+   
+    if not loadann: 
+        m.save('ann.tflearn')
 
     # Print accuracy of classifier when run on test data
     print ((correct/float(c))*100.0,"Number of items",c)
