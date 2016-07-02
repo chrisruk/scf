@@ -70,26 +70,16 @@ class my_top_block(gr.top_block):
         self.blocks_null_sink_0 = blocks.null_sink(gr.sizeof_float*1)
         self.analog_noise_source_x_0 = analog.noise_source_c(analog.GR_GAUSSIAN, snrv[snr][1], 0)
 
-        self.analog_random_source_x_0 = blocks.vector_source_b(map(int, numpy.random.randint(0, 256, 10000)), False)
+        self.analog_random_source_x_0 = blocks.vector_source_b(map(int, numpy.random.randint(0, 256, 50000)), False)
 
-        self.blks2_packet_encoder_0 = grc_blks2.packet_mod_b(grc_blks2.packet_encoder(
-        		samples_per_symbol=2,
-        		bits_per_symbol=bits,
-        		preamble="",
-        		access_code="",
-        		pad_for_usrp=True,
-        	),
-        	payload_length=50,
-        )
-
-        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, "data/train-4/%s-snr%d.dat" % (modulation,snr), False)
+        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, "data/train-rnd4/%s-snr%d.dat" % (modulation,snr), False)
 
         self.connect((self.analog_noise_source_x_0, 0), (self.blocks_add_xx_1, 1))    
         self.connect((self.blocks_multiply_const_vxx_3, 0), (self.blocks_add_xx_1, 0))    
-        self.connect((self.analog_random_source_x_0, 0), (self.blks2_packet_encoder_0, 0))  
-        self.connect((self.blks2_packet_encoder_0, 0), (self.digital_mod, 0)) 
-        self.connect((self.digital_mod, 0), (self.blocks_throttle_0, 0))   
-        self.connect((self.blocks_throttle_0, 0),(self.blocks_multiply_const_vxx_3, 0))    
+        self.connect((self.analog_random_source_x_0, 0), (self.digital_mod, 0)) 
+        #self.connect((self.digital_mod, 0), (self.blocks_throttle_0, 0))   
+        self.connect((self.digital_mod, 0), (self.blocks_multiply_const_vxx_3, 0))    
+        # self.connect((self.blocks_throttle_0, 0),(self.blocks_multiply_const_vxx_3, 0))    
         self.connect((self.blocks_add_xx_1, 0),(self.blocks_file_sink_0, 0))    
 
 if __name__ == '__main__':
@@ -98,9 +88,9 @@ if __name__ == '__main__':
 
             for snr in range(0,9):
                 tb = my_top_block(m,snr)
-                tb.start()
-                time.sleep(20)
-                tb.stop()
+                tb.run()
+                #time.sleep(20)
+                #tb.stop()
     except [[KeyboardInterrupt]]:
         pass
 

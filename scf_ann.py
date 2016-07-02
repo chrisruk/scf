@@ -21,6 +21,7 @@ from scipy import signal
 import matplotlib.pyplot as plt
 import glob
 import pickle
+import matplotlib.pyplot as plt
 
 snrv = ["20","15","10","5","0","-5","-10","-15","-20"] 
 
@@ -251,6 +252,9 @@ with tf.Graph().as_default():
 
     # Is there a simple Tflearn evaluation function?
 
+    acc = []
+    snrl = []
+
     for snr in range(0,9):
         tst = test[snr]
         tstout = test_out[snr]
@@ -271,8 +275,18 @@ with tf.Graph().as_default():
 
         # Print accuracy of classifier when run on test data
         print ("%f,%s,%d" % ((correct/float(c)*100.0),snrv[snr],c))
+        acc.append((correct/float(c)*100.0))
+        snrl.append(snrv[snr])
 
-   
+    plt.plot(snrl, acc)
+    
+    plt.xlabel('SNR')
+    plt.ylabel('Accuracy')
+    plt.title('SNR against Accuracy')
+    plt.grid(True)
+    plt.savefig("acc.png")
+    plt.show()
+
     if not loadann: 
         m.save('ann.tflearn')
 
