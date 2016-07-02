@@ -46,4 +46,5 @@ print("input: {} | output: {}".format(input_data[1], sess.run(output, feed_dict=
 print("input: {} | output: {}".format(input_data[2], sess.run(output, feed_dict={n_input: [input_data[2]]})))
 print("input: {} | output: {}".format(input_data[3], sess.run(output, feed_dict={n_input: [input_data[3]]})))
 
-save_graph(sess)
+#save_graph(sess,output_path,checkpoint,checkpoint_state_name,input_graph_name,output_graph_name):   
+save_graph(sess,"/tmp/graph","saved_checkpoint","checkpoint_state","input_graph.pb","output_graph.pb")
