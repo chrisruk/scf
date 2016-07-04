@@ -30,7 +30,7 @@ init = tf.initialize_all_variables()
 sess = tf.Session()  # create the session and therefore the graph
 sess.run(init)  # initialize all variables  
 
-for epoch in xrange(0, 2001):
+for epoch in xrange(0, 10000):
     # run the training operation
     cvalues = sess.run([train, loss, W_hidden, b_hidden, W_output],
                        feed_dict={n_input: input_data, n_output: output_data})

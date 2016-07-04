@@ -1,9 +1,9 @@
 #!/usr/bin/python
 
-import freezegraph
 import os
 import tensorflow as tf
 import pmt
+import freezegraph
 
 def save_graph(sess,output_path,checkpoint,checkpoint_state_name,input_graph_name,output_graph_name):
 
@@ -43,20 +43,4 @@ def load_graph(output_graph_path):
 
             return (sess,n_input,output)
 
-def process(input_items,sel):
-    for i in input_items:
-        for v in i:
-            a = pmt.make_dict()
-            try:
-                outp = sel.sess.run(sel.out,feed_dict={sel.inp: [v]})[0]
-            except tf.errors.InvalidArgumentError:
-                print("Invalid size of input vector to TensorFlow model")
-                quit()
-            c=0
-            for o in outp:
-                o = o.astype(float)
-                a = pmt.dict_add(a, pmt.intern("out"+str(c)), pmt.from_double(o))
-                c=c+1
-
-            sel.message_port_pub(pmt.intern("classification"),a)
 
