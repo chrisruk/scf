@@ -159,13 +159,13 @@ class my_top_block(gr.top_block):
         self.connect((self.digital_mod, 0), (self.blocks_multiply_const_vxx_3, 0))    
         # self.connect((self.blocks_throttle_0, 0),(self.blocks_multiply_const_vxx_3, 0))    
         self.connect((self.blocks_add_xx_1, 0),(self.specest_cyclo_fam_1, 0))    
-        self.connect((self.specest_cyclo_fam_1,0),(self.blocks_message_sink_0,0))
+        #self.connect((self.specest_cyclo_fam_1,0),(self.blocks_message_sink_0,0))
 
 
         #self.connect((self.specest_cyclo_fam_1, 0), (self.blocks_vector_to_stream_0, 0))
         #self.connect((self.blocks_stream_to_vector_0, 0), (self.inspector_TFModel_0, 0))   
         #self.msg_connect((self.inspector_TFModel_0, 'classification'), (self.blocks_message_debug_0, 'print'))         
-        #self.connect((self.specest_cyclo_fam_1,0),(self.sink,0))
+        self.connect((self.specest_cyclo_fam_1,0),(self.sink,0))
 
 
 
@@ -218,65 +218,60 @@ if __name__ == '__main__':
                 time.sleep(2)
 
                 count = 0
-                print("here")
                 fin = False
                 while True: 
-                    data=tb.msgq_out.delete_head().to_string() # this indeed blocks
+                    #data=tb.msgq_out.delete_head().to_string() # this indeed blocks
                     #data = np.array(tb.specest_cyclo_fam_1.get_estimate())
-                    print("here2")             
-                    """
+                    
                     ## Get last bytes
-                    estimated_data =  tb.sink.data()[-2*P*L*(2*Np):] 
-                    data = np.asarray(estimated_data)
-                    print(data)
+                    floats =  tb.sink.data()#[-2*P*L*(2*Np):] 
+                    print(len(floats)/128)
+                    #data = np.asarray(estimated_data)
+                   
+    
+                 
+                    """ 
+                    print("SH",data.shape)
+    
                     inp.append(data)
                     out.append(z)
                     count += 1
                     #if count > 5:
-                    tb.stop()
-                    break
+    
+                    if count > 10:
+                        tb.stop()
+                        break
                     print("COUNT ",count)
+                    """
                     #Np = 32                                                                                                                               
                     #P  = 128                                                                                                                              
                     #L  = Np/8 
-                    """
                
-                    
+                    """
                     floats = []
                    
                     for i in range(0,len(data),4):
                         floats.append(struct.unpack_from('f',data[i:i+4])[0])
                     
                     print("ll",len(floats))
-            
+                    """
+
                     for i in range(0, len(floats),input_num):
                         dat = floats[i:i+(input_num)]
 
                         if not len(dat) == input_num:
-                            if count == 0:
-                                print("weird")
-                                quit()
-                            fin = True
-                            tb.stop()
                             break
-
-                        inp.append(dat)
+                        inp.append(np.array(dat))
                         out.append(z)
                         
-                        if count > 64*10:
-                            fin = True
-                            tb.stop()
-                            break
-
                         count += 1
+            
+                    break
                     
 
-                    print("CCC",count)
-                    if fin:
-                        break
-                            
-                print(count)
                     
+            break
+                            
             mcount += 1
 
         print("About to train")
@@ -296,6 +291,8 @@ if __name__ == '__main__':
         else:
             
             sess, inp_, out_ = load_graph("/tmp/output_graph.pb","/tmp")
+
+            print("le",len(inp),type(inp))
             ret = sess.run(out_,feed_dict={inp_: inp})
             print(len(ret),len(inp),len(out))
             print(100.0 * np.sum(np.argmax(ret, 1) == np.argmax(out, 1))/ len(ret))
