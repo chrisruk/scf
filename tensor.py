@@ -8,7 +8,7 @@ import freezegraph
 def save_graph(sess,output_path,checkpoint,checkpoint_state_name,input_graph_name,output_graph_name):
 
     checkpoint_prefix = os.path.join(output_path,checkpoint)
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(tf.all_variables())
     saver.save(sess, checkpoint_prefix, global_step=0,latest_filename=checkpoint_state_name)
     tf.train.write_graph(sess.graph.as_graph_def(),output_path,
                            input_graph_name)
@@ -30,7 +30,7 @@ def save_graph(sess,output_path,checkpoint,checkpoint_state_name,input_graph_nam
                               output_node_names, restore_op_name,
                               filename_tensor_name, output_graph_path,clear_devices, "")
 
-def load_graph(output_graph_path):
+def load_graph(output_graph_path,ckpt_path=""):
     with tf.Graph().as_default():
         output_graph_def = tf.GraphDef()
         with open(output_graph_path, "rb") as f:
@@ -40,7 +40,15 @@ def load_graph(output_graph_path):
         with tf.Session() as sess:
             n_input = sess.graph.get_tensor_by_name("inp:0")
             output = sess.graph.get_tensor_by_name("out:0")
-
+            """
+            saver = tf.train.Saver()
+            if not ckpt_path == "":
+                ckpt = tf.train.get_checkpoint_state(ckpt_path)
+                if ckpt and ckpt.model_checkpoint_path:
+                    saver.restore(sess, ckpt.model_checkpoint_path)
+                else:
+                    print("no check")   
+            """ 
             return (sess,n_input,output)
 
 
