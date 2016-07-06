@@ -24,37 +24,42 @@ Np = 4
 P = 4
 L = 2
 
+train = False
+
 input_num = 128
 
 np.set_printoptions(threshold=np.nan)
 
-n_input = tf.placeholder(tf.float32, shape=[None, input_num], name="inp")
-n_output = tf.placeholder(tf.float32, shape=[None, len(mod)], name="outp")
 
-hidden_nodes = int( .89 * (input_num) )
-b_hidden = tf.Variable(tf.random_normal([hidden_nodes]), name="hidden_bias")
-W_hidden = tf.Variable(tf.random_normal([input_num, hidden_nodes]), name="hidden_weights")
 
-# calc hidden layer's activation
-hidden = tf.sigmoid(tf.matmul(n_input, W_hidden) + b_hidden)
-W_output = tf.Variable(tf.random_normal([hidden_nodes, len(mod)]), name="output_weights")  # output layer's weight matrix
-output = tf.sigmoid(tf.matmul(hidden, W_output),name="out")  # calc output layer's activation
-#cross_entropy = -(n_output * tf.log(output) + (1 - n_output) * tf.log(1 - output))
+if train == True:
+    n_input = tf.placeholder(tf.float32, shape=[None, input_num], name="inp")
+    n_output = tf.placeholder(tf.float32, shape=[None, len(mod)], name="outp")
 
-y_pred = tf.nn.relu(output)
-cross_entropy = tf.nn.softmax_cross_entropy_with_logits(y_pred, output)
+    hidden_nodes = int( .89 * (input_num) )
+    b_hidden = tf.Variable(tf.random_normal([hidden_nodes]), name="hidden_bias")
+    W_hidden = tf.Variable(tf.random_normal([input_num, hidden_nodes]), name="hidden_weights")
 
-cross_entropy = -(n_output * tf.log(output) + (1 - n_output) * tf.log(1 - output))
-cross_entropy = tf.square(n_output - output)
-# cross_entropy = tf.square(n_output - output)  # simpler, but also works
-loss = tf.reduce_mean(cross_entropy)  # mean the cross_entropy
-optimizer = tf.train.AdamOptimizer(0.01)  # take a gradient descent for optimizing with a "stepsize" of 0.1
-train = optimizer.minimize(loss)  # let the optimizer train
+    # calc hidden layer's activation
+    hidden = tf.sigmoid(tf.matmul(n_input, W_hidden) + b_hidden)
+    W_output = tf.Variable(tf.random_normal([hidden_nodes, len(mod)]), name="output_weights")  # output layer's weight matrix
+    output = tf.sigmoid(tf.matmul(hidden, W_output),name="out")  # calc output layer's activation
+    #cross_entropy = -(n_output * tf.log(output) + (1 - n_output) * tf.log(1 - output))
 
-init = tf.initialize_all_variables()
+    y_pred = tf.nn.relu(output)
+    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(y_pred, output)
 
-sess = tf.Session()  # create the session and therefore the graph
-sess.run(init)  # initialize all variables  
+    cross_entropy = -(n_output * tf.log(output) + (1 - n_output) * tf.log(1 - output))
+    cross_entropy = tf.square(n_output - output)
+    # cross_entropy = tf.square(n_output - output)  # simpler, but also works
+    loss = tf.reduce_mean(cross_entropy)  # mean the cross_entropy
+    optimizer = tf.train.AdamOptimizer(0.01)  # take a gradient descent for optimizing with a "stepsize" of 0.1
+    train = optimizer.minimize(loss)  # let the optimizer train
+    
+    init = tf.initialize_all_variables()
+    
+    sess = tf.Session()  # create the session and therefore the graph
+    sess.run(init)  # initialize all variables  
 
 
 
@@ -155,6 +160,11 @@ class my_top_block(gr.top_block):
         # self.connect((self.blocks_throttle_0, 0),(self.blocks_multiply_const_vxx_3, 0))    
         self.connect((self.blocks_add_xx_1, 0),(self.specest_cyclo_fam_1, 0))    
         self.connect((self.specest_cyclo_fam_1,0),(self.blocks_message_sink_0,0))
+
+
+        #self.connect((self.specest_cyclo_fam_1, 0), (self.blocks_vector_to_stream_0, 0))
+        #self.connect((self.blocks_stream_to_vector_0, 0), (self.inspector_TFModel_0, 0))   
+        #self.msg_connect((self.inspector_TFModel_0, 'classification'), (self.blocks_message_debug_0, 'print'))         
         #self.connect((self.specest_cyclo_fam_1,0),(self.sink,0))
 
 
@@ -162,22 +172,6 @@ class my_top_block(gr.top_block):
 
 
 from tensor import *
-
-def test():
-    sess, inp, out = load_graph("/tmp/output_graph.pb","/tmp")
-
-    for o in sess.graph.get_operations():
-        print(o.name)
-        
-    """quit()
-
-    correct_prediction = tf.equal(tf.argmax(out,1), tf.argmax(n_output,1))
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    print(sess.run(accuracy,feed_dict={x: x, y_: y}))    
-    """
-
-test()
-quit()
 
 
 
@@ -216,7 +210,7 @@ if __name__ == '__main__':
 
             print(z)
             
-            for snr in range(0,9):
+            for snr in range(0,1):
                 print(m,"SNR",snr)
                 tb = my_top_block(m,snr)
                 tb.start()
@@ -286,18 +280,26 @@ if __name__ == '__main__':
             mcount += 1
 
         print("About to train")
-        print(len(inp),len(out))
-        for epoch in xrange(0, 5000):
-            # run the training operation
-            cvalues = sess.run([train, loss, W_hidden, b_hidden, W_output],
+        
+        if train:
+
+            print(len(inp),len(out))
+            for epoch in xrange(0, 5000):
+                cvalues = sess.run([train, loss, W_hidden, b_hidden, W_output],
                        feed_dict={n_input: inp, n_output: out})
+                if epoch % 200 == 0:
+                    print("")
+                    print("step: {:>3}".format(epoch))
+                    print("loss: {}".format(cvalues[1]))
 
-            if epoch % 200 == 0:
-                print("")
-                print("step: {:>3}".format(epoch))
-                print("loss: {}".format(cvalues[1]))
-
-        save_graph(sess,"/tmp/","saved_checkpoint","checkpoint_state","input_graph.pb","output_graph.pb")
+            save_graph(sess,"/tmp/","saved_checkpoint","checkpoint_state","input_graph.pb","output_graph.pb")
+        else:
+            
+            sess, inp_, out_ = load_graph("/tmp/output_graph.pb","/tmp")
+            ret = sess.run(out_,feed_dict={inp_: inp})
+            print(len(ret),len(inp),len(out))
+            print(100.0 * np.sum(np.argmax(ret, 1) == np.argmax(out, 1))/ len(ret))
+            
         
     except [[KeyboardInterrupt]]:
         pass
