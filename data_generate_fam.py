@@ -24,7 +24,7 @@ Np = 4
 P = 4
 L = 2
 
-train = True
+train = False
 
 input_num = 128
 
@@ -298,17 +298,8 @@ if __name__ == '__main__':
         else:
             
             sess, inp_, out_ = load_graph("/tmp/output_graph.pb","/tmp")
-
-            print("le",len(inp),type(inp))
-
             ret = sess.run(out_,feed_dict={inp_: inp})
             print(len(ret),len(inp),len(out))
-
-            ret = [ret[0]]
-            out = [out[0]]
-            
-            print(ret)
-            print(out)
             print(100.0 * np.sum(np.argmax(ret, 1) == np.argmax(out, 1))/ len(ret))
             
         
