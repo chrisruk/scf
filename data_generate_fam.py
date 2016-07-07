@@ -24,7 +24,7 @@ Np = 4
 P = 4
 L = 2
 
-train = False
+train = True
 
 input_num = 128
 
@@ -47,10 +47,12 @@ if train == True:
     #cross_entropy = -(n_output * tf.log(output) + (1 - n_output) * tf.log(1 - output))
 
     y_pred = tf.nn.relu(output)
-    cross_entropy = tf.nn.softmax_cross_entropy_with_logits(y_pred, output)
+    #cross_entropy = tf.nn.softmax_cross_entropy_with_logits(y_pred, output)
 
-    cross_entropy = -(n_output * tf.log(output) + (1 - n_output) * tf.log(1 - output))
-    cross_entropy = tf.square(n_output - output)
+    #cross_entropy = -(n_output * tf.log(output) + (1 - n_output) * tf.log(1 - output))
+
+    cross_entropy = -tf.reduce_sum(output*tf.log(tf.clip_by_value(n_output,1e-10,1.0)))
+    #cross_entropy = tf.square(n_output - output)
     # cross_entropy = tf.square(n_output - output)  # simpler, but also works
     loss = tf.reduce_mean(cross_entropy)  # mean the cross_entropy
     optimizer = tf.train.AdamOptimizer(0.01)  # take a gradient descent for optimizing with a "stepsize" of 0.1
@@ -155,8 +157,11 @@ class my_top_block(gr.top_block):
         self.connect((self.analog_noise_source_x_0, 0), (self.blocks_add_xx_1, 1))    
         self.connect((self.blocks_multiply_const_vxx_3, 0), (self.blocks_add_xx_1, 0))    
         self.connect((self.analog_random_source_x_0, 0), (self.digital_mod, 0)) 
-        #self.connect((self.digital_mod, 0), (self.blocks_throttle_0, 0))   
-        self.connect((self.digital_mod, 0), (self.blocks_multiply_const_vxx_3, 0))    
+        #self.connect((self.digital_mod, 0), (self.blocks_throttle_0, 0))  
+        self.connect((self.digital_mod, 0), (self.blocks_throttle_0, 0))    
+        self.connect((self.blocks_throttle_0, 0),(self.blocks_multiply_const_vxx_3, 0))    
+
+        #self.connect((self.digital_mod, 0), (self.blocks_multiply_const_vxx_3, 0))    
         # self.connect((self.blocks_throttle_0, 0),(self.blocks_multiply_const_vxx_3, 0))    
         self.connect((self.blocks_add_xx_1, 0),(self.specest_cyclo_fam_1, 0))    
         #self.connect((self.specest_cyclo_fam_1,0),(self.blocks_message_sink_0,0))
@@ -264,13 +269,15 @@ if __name__ == '__main__':
                         inp.append(np.array(dat))
                         out.append(z)
                         
+                        if count > 1000:
+                            break 
                         count += 1
             
                     break
                     
 
                     
-            break
+            #break
                             
             mcount += 1
 
@@ -279,7 +286,7 @@ if __name__ == '__main__':
         if train:
 
             print(len(inp),len(out))
-            for epoch in xrange(0, 5000):
+            for epoch in xrange(0, 10000):
                 cvalues = sess.run([train, loss, W_hidden, b_hidden, W_output],
                        feed_dict={n_input: inp, n_output: out})
                 if epoch % 200 == 0:
@@ -293,8 +300,15 @@ if __name__ == '__main__':
             sess, inp_, out_ = load_graph("/tmp/output_graph.pb","/tmp")
 
             print("le",len(inp),type(inp))
+
             ret = sess.run(out_,feed_dict={inp_: inp})
             print(len(ret),len(inp),len(out))
+
+            ret = [ret[0]]
+            out = [out[0]]
+            
+            print(ret)
+            print(out)
             print(100.0 * np.sum(np.argmax(ret, 1) == np.argmax(out, 1))/ len(ret))
             
         
