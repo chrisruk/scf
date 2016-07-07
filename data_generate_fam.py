@@ -15,6 +15,7 @@ import tensorflow as tf
 from tensor import *
 from specest import fam_matplotlib
 import matplotlib.pylab as plt
+import tflearn
 
 snr = ["20","15","10","5","0","-5","-10","-15","-20"] 
 snrv = [[1,0.32],[1,0.435],[1,0.56],[1,0.75],[1,1],[0.75,1],[0.56,1],[0.435,1],[0.32,1]]
@@ -25,8 +26,7 @@ P = 4
 L = 2
 
 train = False
-
-input_num = 128
+input_num = 112
 
 np.set_printoptions(threshold=np.nan)
 
@@ -36,7 +36,7 @@ if train == True:
     n_input = tf.placeholder(tf.float32, shape=[None, input_num], name="inp")
     n_output = tf.placeholder(tf.float32, shape=[None, len(mod)], name="outp")
 
-    hidden_nodes = int( .89 * (input_num) )
+    hidden_nodes = int( 1.3 * (input_num) )
     b_hidden = tf.Variable(tf.random_normal([hidden_nodes]), name="hidden_bias")
     W_hidden = tf.Variable(tf.random_normal([input_num, hidden_nodes]), name="hidden_weights")
 
@@ -144,6 +144,9 @@ class my_top_block(gr.top_block):
             bits = 1
 
         self.sink = blocks.vector_sink_f(2*Np) 
+
+        self.sink = blocks.null_sink(gr.sizeof_float * 2 * Np)    
+
         self.blocks_add_xx_1 = blocks.add_vcc(1)
         self.specest_cyclo_fam_1 = specest.cyclo_fam(Np, P, L)
         self.blocks_multiply_const_vxx_3 = blocks.multiply_const_vcc((snrv[snr][0], ))
@@ -209,7 +212,11 @@ if __name__ == '__main__':
         mcount = 0
 
         for m in mod:
-
+            """
+            if not (m == "2psk" ):
+                mcount += 1
+                continue
+            """
             z = np.zeros((len(mod),))
             z[mcount] = 1        
 
@@ -220,17 +227,38 @@ if __name__ == '__main__':
                 tb = my_top_block(m,snr)
                 tb.start()
 
-                time.sleep(2)
+                time.sleep(3)
 
                 count = 0
                 fin = False
+                old = None
                 while True: 
                     #data=tb.msgq_out.delete_head().to_string() # this indeed blocks
                     #data = np.array(tb.specest_cyclo_fam_1.get_estimate())
                     
                     ## Get last bytes
-                    floats =  tb.sink.data()#[-2*P*L*(2*Np):] 
-                    print(len(floats)/128)
+                    #floats =  tb.sink.data()#[-2*P*L*(2*Np):] 
+                    floats = np.array(tb.specest_cyclo_fam_1.get_estimate())
+
+                    if old == None:
+                        old = floats
+                    else:
+                        if (floats == old).all():
+                            continue
+                
+                    count = count + 1        
+                    inp.append(floats)
+                    out.append(z)
+
+                    if count > 10000:
+                        break
+
+                    old = floats
+                    
+                    #print(floats.shape)
+
+                    #quit()
+                    #print(len(floats)/128)
                     #data = np.asarray(estimated_data)
                    
     
@@ -260,7 +288,8 @@ if __name__ == '__main__':
                     
                     print("ll",len(floats))
                     """
-
+                
+                    """
                     for i in range(0, len(floats),input_num):
                         dat = floats[i:i+(input_num)]
 
@@ -274,6 +303,7 @@ if __name__ == '__main__':
                         count += 1
             
                     break
+                    """
                     
 
                     
@@ -282,9 +312,51 @@ if __name__ == '__main__':
             mcount += 1
 
         print("About to train")
-        
-        if train:
+       
+        print("NEURONS",inp[0].shape[0]*inp[0].shape[1])
 
+        with tf.Graph().as_default():
+            hidden = int(input_num * (0.89))
+            tflearn.init_graph(num_cores=8)
+            net = tflearn.input_data(shape=[None,inp[0].shape[0],inp[0].shape[1]])
+            net = tflearn.fully_connected(net, hidden,activation='sigmoid') #, activation='sigmoid')
+            net = tflearn.fully_connected(net, len(mod), activation='softmax')
+            regressor = tflearn.regression(net, optimizer='adam',learning_rate=0.001,loss='categorical_crossentropy') #, loss=lossv)
+            m = tflearn.DNN(regressor,tensorboard_verbose=3) 
+        
+
+            if train:
+                m.fit(inp, out, n_epoch=50, snapshot_epoch=False,show_metric=True)
+                m.save("fam.ann")
+
+            else:
+                m.load("fam.ann")
+
+                print(inp[1])
+                print("---")
+                print(inp[2])
+                print("---")
+                print(inp[3])
+                if (inp[1] == inp[100]).all():
+                    print("error")
+                    quit()
+                ret = m.predict(inp)
+
+
+                #for v in ret:
+                #    print(np.argmax(v))
+
+                #print(ret[0])
+                #print(out[0])
+
+
+                print(100.0 * np.sum(np.argmax(ret, 1) == np.argmax(out, 1))/ len(ret))
+
+                #sess, inp_, out_ = load_graph("/tmp/output_graph.pb","/tmp")
+            
+            
+
+            """
             print(len(inp),len(out))
             for epoch in xrange(0, 10000):
                 cvalues = sess.run([train, loss, W_hidden, b_hidden, W_output],
@@ -295,13 +367,41 @@ if __name__ == '__main__':
                     print("loss: {}".format(cvalues[1]))
 
             save_graph(sess,"/tmp/","saved_checkpoint","checkpoint_state","input_graph.pb","output_graph.pb")
-        else:
+            """
             
-            sess, inp_, out_ = load_graph("/tmp/output_graph.pb","/tmp")
+            """
+            image = plt.imshow(numpy.array(inp[1]),
+                        interpolation='nearest',
+                        animated=True,
+                        extent=(-0.5, 0.5-1.0/Np, -1.0, 1.0-1.0/(P*L)))
+            cbar = plt.colorbar(image)
+            plt.xlabel('frequency / fs')
+            plt.ylabel('cycle frequency / fs')
+            plt.axis('normal')
+            plt.title('Magnitude of estimated cyclic spectrum with FAM')
+
+            data = numpy.array(inp[1]) 
+            image.set_data(data) 
+            image.changed() 
+            cbar.set_clim(vmax=data.max()) 
+            cbar.draw_all() 
+            plt.draw()
+            plt.show()  
+            """
+
+            """
+
+            print("OUT",out[0])
+            
             ret = sess.run(out_,feed_dict={inp_: inp})
-            print(len(ret),len(inp),len(out))
+
+            print("RET",ret[0])
+            print(len(ret),len(out))
+            #ret = [ret[0]]
+            #out = [out[0]]
+
             print(100.0 * np.sum(np.argmax(ret, 1) == np.argmax(out, 1))/ len(ret))
-            
+            """
         
     except [[KeyboardInterrupt]]:
         pass
