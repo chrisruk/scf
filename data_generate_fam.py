@@ -23,7 +23,7 @@ Np = 4
 P = 4
 L = 2
 
-train = True
+train = False
 input_num = 112
 
 np.set_printoptions(threshold=np.nan)
@@ -195,6 +195,11 @@ from tensor import *
 
 
 
+def shuffle_in_unison_inplace(a, b):
+    assert len(a) == len(b)
+    p = numpy.random.permutation(len(a))
+    return a[p], b[p]
+
 
 
 
@@ -257,11 +262,11 @@ if __name__ == '__main__':
                 
                     count = count + 1  
         
-                    if count % 10 == 0:
-                        inp.append(floats)
+                    if count % 2 == 0:
+                        inp.append(floats.flatten())
                         out.append(z)
 
-                    if count > 200000:
+                    if count > 10000:
                         break
 
                     old = floats
@@ -322,14 +327,121 @@ if __name__ == '__main__':
                             
             mcount += 1
 
+
+
+        
+
+        inp, out = shuffle_in_unison_inplace(np.array(inp), np.array(out))
+    
+        test_i = inp[len(inp)/2:len(inp)]
+        test_o = out[len(inp)/2:len(inp)]
+
+        print(len(test_i),len(test_o))
+        
+        train_i = inp[0:len(inp)/2]
+        train_o = out[0:len(inp)/2]
+
+        print(len(train_i),len(train_o))
+
         print("About to train")
        
         #print("NEURONS",inp[0].shape[0]*inp[0].shape[1])
+        # Parameters
+        learning_rate = 0.001
+        training_epochs = 200
+        batch_size = 100
+        display_step = 1
 
+        # Network Parameters
+        n_hidden_1 = input_num / 3 # 1st layer number of features
+        n_hidden_2 = input_num / 3 # 2nd layer number of features
+        n_input = input_num # MNIST data input (img shape: 28*28)
+        n_classes = len(mod) # MNIST total classes (0-9 digits)
+
+        # tf Graph input
+        x = tf.placeholder("float", [None, n_input])
+        y = tf.placeholder("float", [None, n_classes])
+
+
+        # Create model
+        def multilayer_perceptron(x, weights, biases):
+            # Hidden layer with RELU activation
+            layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
+            layer_1 = tf.nn.relu(layer_1)
+            # Hidden layer with RELU activation
+            layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
+            layer_2 = tf.nn.relu(layer_2)
+            # Output layer with linear activation
+            out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
+            return out_layer
+
+        # Store layers weight & bias
+        weights = {
+            'h1': tf.Variable(tf.random_normal([n_input, n_hidden_1])),
+            'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
+            'out': tf.Variable(tf.random_normal([n_hidden_2, n_classes]))
+        }
+
+        biases = {
+            'b1': tf.Variable(tf.random_normal([n_hidden_1])),
+            'b2': tf.Variable(tf.random_normal([n_hidden_2])),
+            'out': tf.Variable(tf.random_normal([n_classes]))
+        }
+
+        # Construct model
+        pred = multilayer_perceptron(x, weights, biases)
+
+        # Define loss and optimizer
+        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(pred, y))
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+
+        # Initializing the variables
+        init = tf.initialize_all_variables()
+
+        # Launch the graph
+        with tf.Session() as sess:
+            sess.run(init)
+
+            # Training cycle
+            for epoch in range(training_epochs):
+                avg_cost = 0.
+                total_batch = int(len(inp)/batch_size)
+                # Loop over all batches
+                for i in range(total_batch):
+                    #batch_x, batch_y = mnist.train.next_batch(batch_size)
+
+                    batch_x = train_i[i*batch_size:(i*batch_size)+100]
+                    batch_y = train_o[i*batch_size:(i*batch_size)+100]
+
+                    if len(batch_x) == 0 or len(batch_y) == 0:
+                        break
+                    # Run optimization op (backprop) and cost op (to get loss value)
+                    _, c = sess.run([optimizer, cost], feed_dict={x: batch_x,
+                                                          y: batch_y})
+                    # Compute average loss
+                    avg_cost += c / total_batch
+                # Display logs per epoch step
+                if epoch % display_step == 0:
+                    print "Epoch:", '%04d' % (epoch+1), "cost=", \
+                        "{:.9f}".format(avg_cost)
+            
+            print "Optimization Finished!"
+
+            #pred.save("mlayer.ann")
+
+            correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
+            # Calculate accuracy
+            accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
+            print "Accuracy:", accuracy.eval({x: test_i, y: test_o})
+
+        quit()
     
         
         
         with tf.Graph().as_default():
+
+
+            """
             hidden = int(input_num * (0.89))
             tflearn.init_graph(num_cores=8)
             net = tflearn.input_data(shape=[None,inp[0].shape[0],inp[0].shape[1]])
@@ -338,7 +450,7 @@ if __name__ == '__main__':
             net = tflearn.fully_connected(net, len(mod), activation='softmax')
             regressor = tflearn.regression(net, optimizer='adam',learning_rate=0.001,loss='categorical_crossentropy') #, loss=lossv)
             m = tflearn.DNN(regressor,tensorboard_verbose=3) 
-        
+            """
 
             if train:
                 m.fit(inp, out, n_epoch=50, snapshot_epoch=False,show_metric=True)
