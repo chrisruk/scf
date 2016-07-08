@@ -247,13 +247,12 @@ with tf.Graph().as_default():
         # Network Parameters
         n_hidden_1 = input_num / 6 # 1st layer number of features
         n_hidden_2 = input_num / 6 # 2nd layer number of features
-        n_input = input_num # MNIST data input (img shape: 28*28)
-        n_classes = len(mod) # MNIST total classes (0-9 digits)
+        n_input = input_num 
+        n_classes = len(mod) 
 
         # tf Graph input
         x = tf.placeholder("float", [None, n_input],name="inp")
         y = tf.placeholder("float", [None, n_classes])
-
 
         # Create model
         def multilayer_perceptron(x, weights, biases):
@@ -311,10 +310,8 @@ with tf.Graph().as_default():
             print "Optimization Finished!"
 
             save_graph(sess,"/tmp/","saved_checkpoint","checkpoint_state","input_graph.pb","output_graph.pb")
-
-            #pred.save("mlayer.ann")
-
             correct_prediction = tf.equal(tf.argmax(pred, 1), tf.argmax(y, 1))
+            
             # Calculate accuracy
             accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
     
