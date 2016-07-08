@@ -26,10 +26,10 @@ import matplotlib.pyplot as plt
 snrv = ["20","15","10","5","0","-5","-10","-15","-20"] 
 
 # Load SCF training data from previously pickled file
-load_scf_training = True
+load_scf_training = False
 
 # Load SCF testing data from previously pickled file
-load_scf_testing = True
+load_scf_testing = False
 
 # Save SCF data to pickled file
 save = True
@@ -137,20 +137,6 @@ def scf(y):
     return o.flatten()
 
 
-"""
-# Graph data
-
-# payload 90
-y = np.fromfile("data/train-2/fsk-snr0.dat", dtype=np.complex64)
-graph(scf(y))
-
-# payload 189
-y = np.fromfile("data/train-3/fsk-snr0.dat", dtype=np.complex64)
-graph(scf(y))
-
-"""
-
-
 # Load dataset of different modulation schemes
 def load_data(path,train):
 
@@ -163,7 +149,7 @@ def load_data(path,train):
         z = np.zeros((len(mod),))
         z[count] = 1
 
-        for i in range(0,1):
+        for i in range(0,9):
         
             y = np.fromfile("%s/%s-snr%d.dat" % (path,m,i), dtype=np.complex64)
             y = np.array_split(y,int(len(y)/(1024*5)))
