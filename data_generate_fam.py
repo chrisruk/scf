@@ -4,16 +4,14 @@ from gnuradio import audio, analog
 from gnuradio import digital
 from gnuradio import blocks
 from grc_gnuradio import blks2 as grc_blks2
-import inspector
 import threading
 import time
 import numpy
-import specest
 import struct
 import numpy as np
-import tensorflow as tf    
+import tensorflow as tf   
+import specest 
 from tensor import *
-from specest import fam_matplotlib
 import matplotlib.pylab as plt
 import tflearn
 
@@ -25,7 +23,7 @@ Np = 4
 P = 4
 L = 2
 
-train = False
+train = True
 input_num = 112
 
 np.set_printoptions(threshold=np.nan)
@@ -35,8 +33,9 @@ np.set_printoptions(threshold=np.nan)
 if train == True:
     n_input = tf.placeholder(tf.float32, shape=[None, input_num], name="inp")
     n_output = tf.placeholder(tf.float32, shape=[None, len(mod)], name="outp")
-
-    hidden_nodes = int( 1.3 * (input_num) )
+    
+    """
+    hidden_nodes = int( 0.89 * (input_num) )
     b_hidden = tf.Variable(tf.random_normal([hidden_nodes]), name="hidden_bias")
     W_hidden = tf.Variable(tf.random_normal([input_num, hidden_nodes]), name="hidden_weights")
 
@@ -44,20 +43,30 @@ if train == True:
     hidden = tf.sigmoid(tf.matmul(n_input, W_hidden) + b_hidden)
     W_output = tf.Variable(tf.random_normal([hidden_nodes, len(mod)]), name="output_weights")  # output layer's weight matrix
     output = tf.sigmoid(tf.matmul(hidden, W_output),name="out")  # calc output layer's activation
-    #cross_entropy = -(n_output * tf.log(output) + (1 - n_output) * tf.log(1 - output))
-
-    y_pred = tf.nn.relu(output)
-    #cross_entropy = tf.nn.softmax_cross_entropy_with_logits(y_pred, output)
-
-    #cross_entropy = -(n_output * tf.log(output) + (1 - n_output) * tf.log(1 - output))
-
     cross_entropy = -tf.reduce_sum(output*tf.log(tf.clip_by_value(n_output,1e-10,1.0)))
-    #cross_entropy = tf.square(n_output - output)
-    # cross_entropy = tf.square(n_output - output)  # simpler, but also works
     loss = tf.reduce_mean(cross_entropy)  # mean the cross_entropy
     optimizer = tf.train.AdamOptimizer(0.01)  # take a gradient descent for optimizing with a "stepsize" of 0.1
     train = optimizer.minimize(loss)  # let the optimizer train
-    
+    """
+
+    """
+    logits = tf.matmul(n_input, weights) + biases
+    relu = tf.sigmoid(logits)
+    dp = tf.nn.dropout(relu, 0.9)
+    logits2 = tf.matmul(dp, weights2) + biases2
+    relu2 = tf.sigmoid(logits2)
+    dp2 = tf.nn.dropout(relu2, 0.9)
+    logits3 = tf.matmul(dp2, weights3) + biases3  
+    loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits3, tf_train_labels))
+    train =tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss)
+    """
+
+
+
+
+
+
+ 
     init = tf.initialize_all_variables()
     
     sess = tf.Session()  # create the session and therefore the graph
@@ -246,11 +255,13 @@ if __name__ == '__main__':
                         if (floats == old).all():
                             continue
                 
-                    count = count + 1        
-                    inp.append(floats)
-                    out.append(z)
+                    count = count + 1  
+        
+                    if count % 10 == 0:
+                        inp.append(floats)
+                        out.append(z)
 
-                    if count > 10000:
+                    if count > 200000:
                         break
 
                     old = floats
@@ -313,13 +324,17 @@ if __name__ == '__main__':
 
         print("About to train")
        
-        print("NEURONS",inp[0].shape[0]*inp[0].shape[1])
+        #print("NEURONS",inp[0].shape[0]*inp[0].shape[1])
 
+    
+        
+        
         with tf.Graph().as_default():
             hidden = int(input_num * (0.89))
             tflearn.init_graph(num_cores=8)
             net = tflearn.input_data(shape=[None,inp[0].shape[0],inp[0].shape[1]])
             net = tflearn.fully_connected(net, hidden,activation='sigmoid') #, activation='sigmoid')
+            net = tflearn.dropout(net, 0.8)
             net = tflearn.fully_connected(net, len(mod), activation='softmax')
             regressor = tflearn.regression(net, optimizer='adam',learning_rate=0.001,loss='categorical_crossentropy') #, loss=lossv)
             m = tflearn.DNN(regressor,tensorboard_verbose=3) 
@@ -352,13 +367,13 @@ if __name__ == '__main__':
 
                 print(100.0 * np.sum(np.argmax(ret, 1) == np.argmax(out, 1))/ len(ret))
 
-                #sess, inp_, out_ = load_graph("/tmp/output_graph.pb","/tmp")
-            
+        quit()
             
 
-            """
+        if train:
+
             print(len(inp),len(out))
-            for epoch in xrange(0, 10000):
+            for epoch in xrange(0, 1000):
                 cvalues = sess.run([train, loss, W_hidden, b_hidden, W_output],
                        feed_dict={n_input: inp, n_output: out})
                 if epoch % 200 == 0:
@@ -367,7 +382,10 @@ if __name__ == '__main__':
                     print("loss: {}".format(cvalues[1]))
 
             save_graph(sess,"/tmp/","saved_checkpoint","checkpoint_state","input_graph.pb","output_graph.pb")
-            """
+        else:
+
+            sess, inp_, out_ = load_graph("/tmp/output_graph.pb","/tmp")
+
             
             """
             image = plt.imshow(numpy.array(inp[1]),
@@ -389,7 +407,7 @@ if __name__ == '__main__':
             plt.show()  
             """
 
-            """
+            
 
             print("OUT",out[0])
             
@@ -401,7 +419,7 @@ if __name__ == '__main__':
             #out = [out[0]]
 
             print(100.0 * np.sum(np.argmax(ret, 1) == np.argmax(out, 1))/ len(ret))
-            """
+            
         
     except [[KeyboardInterrupt]]:
         pass
