@@ -334,7 +334,7 @@ if __name__ == '__main__':
             tflearn.init_graph(num_cores=8)
             net = tflearn.input_data(shape=[None,inp[0].shape[0],inp[0].shape[1]])
             net = tflearn.fully_connected(net, hidden,activation='sigmoid') #, activation='sigmoid')
-            net = tflearn.dropout(net, 0.8)
+            #net = tflearn.dropout(net, 0.8)
             net = tflearn.fully_connected(net, len(mod), activation='softmax')
             regressor = tflearn.regression(net, optimizer='adam',learning_rate=0.001,loss='categorical_crossentropy') #, loss=lossv)
             m = tflearn.DNN(regressor,tensorboard_verbose=3) 
