@@ -230,21 +230,14 @@ inputs = len(train_[0])
 hidden = int(inputs * (0.89))
 print("Inputs ",inputs,"Hidden ", hidden)
 
-# Hack - This could be improved likely, by using a built-in function to Tensor Flow, can't
-# seem to find one at the moment
-def thresh(i):
-    if i >= 0.5:
-        return 1
-    else: 
-        return 0
-
 
 with tf.Graph().as_default():
 
     if True:
         nop = True
 
-        #print("NEURONS",inp[0].shape[0]*inp[0].shape[1])
+        # Model based on https://github.com/aymericdamien/TensorFlow-Examples/blob/master/examples/3_NeuralNetworks/multilayer_perceptron.py
+
         # Parameters
         learning_rate = 0.001
         training_epochs = 2000
