@@ -263,7 +263,13 @@ if __name__ == '__main__':
                     count = count + 1  
         
                     if count % 2 == 0:
-                        inp.append(floats.flatten())
+                        f = floats.flatten()
+                                                                                                                                                                                                                                  
+                        o2 = np.array(f)                                                                                                                                                                                          
+                        o = (o2/o2.max())                                                                                                                                                                                         
+                        o[o == np.inf] = 0                                                                                                                                                                                          
+                
+                        inp.append(o)
                         out.append(z)
 
                     if count > 10000:
