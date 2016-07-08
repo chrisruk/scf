@@ -262,17 +262,20 @@ if __name__ == '__main__':
                 
                     count = count + 1  
         
-                    if count % 2 == 0:
+                    if count % 20 == 0:
                         f = floats.flatten()
                                                                                                                                                                                                                                   
-                        o2 = np.array(f)                                                                                                                                                                                          
-                        o = (o2/o2.max())                                                                                                                                                                                         
+                        o2 = np.array(f)
+                        #print(o2)
+
+                        o = ((o2-o2.mean())/np.std(o2))                                                                                                                                                                                         
                         o[o == np.inf] = 0                                                                                                                                                                                          
-                
+                        #print(o)
+                        #quit()
                         inp.append(o)
                         out.append(z)
 
-                    if count > 10000:
+                    if count > 200000:
                         break
 
                     old = floats
@@ -354,13 +357,13 @@ if __name__ == '__main__':
         #print("NEURONS",inp[0].shape[0]*inp[0].shape[1])
         # Parameters
         learning_rate = 0.001
-        training_epochs = 200
+        training_epochs = 50
         batch_size = 100
         display_step = 1
 
         # Network Parameters
-        n_hidden_1 = input_num / 3 # 1st layer number of features
-        n_hidden_2 = input_num / 3 # 2nd layer number of features
+        n_hidden_1 = input_num / 5 # 1st layer number of features
+        n_hidden_2 = input_num / 5 # 2nd layer number of features
         n_input = input_num # MNIST data input (img shape: 28*28)
         n_classes = len(mod) # MNIST total classes (0-9 digits)
 
