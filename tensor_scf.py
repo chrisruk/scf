@@ -26,11 +26,11 @@ import matplotlib.pyplot as plt
 snrv = ["20","15","10","5","0","-5","-10","-15","-20"] 
 
 # Load SCF training data from previously pickled file
-load_scf_training = False
+load_scf_training = True
 # Load SCF testing data from previously pickled file
-load_scf_testing = False
+load_scf_testing = True
 # Save SCF data to pickled file
-save = True
+save = False
 
 # Modulation schemes
 mod = ["2psk","4psk","8psk","fsk"]
@@ -357,13 +357,13 @@ def getnet(datain,dataout,modulation):
 
         # Parameters
         learning_rate = 0.001
-        training_epochs = 15000
+        training_epochs = 10000
         batch_size = 100
         display_step = 10
 
         # Network Parameters
-        n_hidden_1 = 15 #int(input_num / 4.0) # 1st layer number of features
-        n_hidden_2 = 15 #int(input_num / 4.0) # 1st layer number of features
+        n_hidden_1 = 10 #int(input_num / 4.0) # 1st layer number of features
+        n_hidden_2 = 10 #int(input_num / 4.0) # 1st layer number of features
 
         #n_hidden_1 = int(input_num / 4) # 1st layer number of features
         #n_hidden_2 = int(input_num / 4) # 2nd layer number of features
