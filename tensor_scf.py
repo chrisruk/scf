@@ -43,7 +43,7 @@ input_num = 760
 training = True
 
 
-SIGLEN = 1024 * 5
+SIGLEN = 1024 * 15
 
 
 # Generate a graph of SCF data
@@ -69,12 +69,12 @@ def graph(za):
 def scf(y):
 
     za = []
-    d = collections.deque(maxlen=5)
+    d = collections.deque(maxlen=10)
     y = y[0:SIGLEN]
 
     # Seemed best at 1000, at 88% 
 
-    FFTsize = 100
+    FFTsize = 200
     N = len(y)/FFTsize
 
 
@@ -165,7 +165,7 @@ def process(path,m,i,z,qu):
         o.append(scf(q[0:SIGLEN]))
         oo.append(z)
         c += 1
-        if c > 100:
+        if c > 10:
             break
     
     qu.put((o,oo,m,i,z))
@@ -335,7 +335,7 @@ def getnet(datain,dataout,modulation):
         teo = []
 
 
-        for i in range(0,9):
+        for i in range(0,5):
             c = 0
             #for noise in range(0,5):    
             for v in datain[i]:
@@ -357,7 +357,7 @@ def getnet(datain,dataout,modulation):
 
         # Parameters
         learning_rate = 0.001
-        training_epochs = 10000
+        training_epochs = 15000
         batch_size = 100
         display_step = 10
 
