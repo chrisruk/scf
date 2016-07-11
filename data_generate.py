@@ -18,7 +18,7 @@ class my_top_block(gr.top_block):
         self.samp_rate = samp_rate = 32000
         gr.top_block.__init__(self)
 
-        self.inspector_scf_0 = inspector.scf()
+        #self.inspector_scf_0 = inspector.scf()
 
         if modulation == "2psk":
             self.digital_mod = digital.psk.psk_mod(
@@ -70,9 +70,9 @@ class my_top_block(gr.top_block):
         self.blocks_null_sink_0 = blocks.null_sink(gr.sizeof_float*1)
         self.analog_noise_source_x_0 = analog.noise_source_c(analog.GR_GAUSSIAN, snrv[snr][1], 0)
 
-        self.analog_random_source_x_0 = blocks.vector_source_b(map(int, numpy.random.randint(0, 256, 50000)), False)
+        self.analog_random_source_x_0 = blocks.vector_source_b(map(int, numpy.random.randint(0, 256, 2*400000)), False)
 
-        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, "data/train-rnd4/%s-snr%d.dat" % (modulation,snr), False)
+        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, "data/train-rnd3/%s-snr%d.dat" % (modulation,snr), False)
 
         self.connect((self.analog_noise_source_x_0, 0), (self.blocks_add_xx_1, 1))    
         self.connect((self.blocks_multiply_const_vxx_3, 0), (self.blocks_add_xx_1, 0))    
