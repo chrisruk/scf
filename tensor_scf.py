@@ -20,7 +20,10 @@ import tensorflow as tf
 from scipy import signal
 import matplotlib.pyplot as plt
 import glob
+
 import pickle
+import cPickle
+
 import matplotlib.pyplot as plt
 
 snrv = ["20","15","10","5","0","-5","-10","-15","-20"] 
@@ -165,7 +168,7 @@ def process(path,m,i,z,qu):
         o.append(scf(q[0:SIGLEN]))
         oo.append(z)
         c += 1
-        if c > 10:
+        if c > 300:
             break
     
     qu.put((o,oo,m,i,z))
@@ -240,8 +243,8 @@ test_out = []
 
 # Load pickled SCF training data
 if load_scf_training:
-    train_ = pickle.load(open('train2.dat', 'rb'))
-    train_out = pickle.load(open('train_o2.dat', 'rb'))
+    train_ = cPickle.load(open('train2.dat', 'rb'))
+    train_out = cPickle.load(open('train_o2.dat', 'rb'))
 else:
     train1,train_out = load_data("data/train-rnd1",True)
     #train2,train_out2 = load_data("data/train-rnd2",True,range(0,1))
@@ -273,8 +276,8 @@ else:
 
 # Load pickled SCF testing data
 if load_scf_testing:
-    test = pickle.load(open('test2.dat', 'rb'))
-    test_out = pickle.load(open('test_o2.dat', 'rb'))
+    test = cPickle.load(open('test2.dat', 'rb'))
+    test_out = cPickle.load(open('test_o2.dat', 'rb'))
 else:
     print("loading rnd 3 ")
     test,test_out = load_data("data/train-rnd3",False)
