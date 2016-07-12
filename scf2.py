@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/python2.7
 import matplotlib.pyplot as plot
 import numpy as np
 import sys
@@ -88,7 +88,7 @@ for a in np.arange(0,1,0.05):
     tm = np.mean( np.array(out), axis=0 )
 
     tm2 = []    
-    ff = collections.deque(maxlen=70)
+    ff = collections.deque(maxlen=20)
     for v in tm:
         ff.append(v)
         ffo = np.mean(ff,axis=0)
@@ -109,7 +109,8 @@ for a in np.arange(0,1,0.05):
 
 za = np.array(za)
 nx, ny = za.shape[1], za.shape[0]
-x = np.arange(0.5,-0.5,-1/mx)
+
+x = np.arange(0.5,-0.5,-1/float(mx))
 y = alph
 
 hf = plt.figure()
