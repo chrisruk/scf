@@ -247,7 +247,7 @@ with tf.Graph().as_default():
     if loadann:
         m.load('ann.tflearn')
     else:
-        m.fit(train, train_out, n_epoch=50, snapshot_epoch=False,show_metric=True)
+        m.fit(train[0], train_out[0], n_epoch=50, snapshot_epoch=False,show_metric=True)
 
 
     # Is there a simple Tflearn evaluation function?

@@ -20,7 +20,7 @@ import tensorflow as tf
 from scipy import signal
 import matplotlib.pyplot as plt
 import glob
-
+import tflearn
 import pickle
 import cPickle
 
@@ -67,6 +67,84 @@ def graph(za):
 
     ha.plot_surface(X, Y, za,rstride=1, cstride=1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
     plt.show()
+
+
+
+def scf2(y):
+
+    za = []
+    y = y[0:SIGLEN]
+
+    d = collections.deque(maxlen=1)
+
+    FFTsize = 1024*5
+    N = int(len(y)/FFTsize)
+    T = int(len(y) / N) # Frame length
+
+    Fs = T #*2
+    al = 1*Fs
+    n = 0
+
+    frame = y[(n*int(T)):int(n*T)+int(T)]
+    xf = np.fft.fftshift(np.fft.fft(frame))
+    xfp = np.append([0]*int(al/2),xf)
+    xfm = np.append(xf,[0]*int(al/2))
+    Sxf = xfp * np.conj(xfm)
+    mx = len(Sxf)
+    alph = []
+
+    for a in np.arange(0,1,0.005):
+        Fs = T #*2
+        al = a * Fs
+        alph.append(a)
+        #print("A",a)
+    
+        out = []
+
+        count = 0
+        for n in range(0,N):
+        #for frame in window(y,FFTsize):
+    
+            count = n
+            frame = y[int(n*T):int(n*T)+T]
+            xf = np.fft.fftshift(np.fft.fft(frame))
+            xfp = np.append([0]*int(al/2),xf)
+            xfm = np.append(xf,[0]*int(al/2))
+            np.set_printoptions(threshold=np.nan)
+        
+            Sxf = xfp * np.conj(xfm) 
+ 
+            orig = len(Sxf)
+            Sxf.resize((mx,))
+            newsize = len(Sxf)
+
+            Sxf = np.roll(Sxf,int((newsize-orig)/2))
+            new = []
+            for v in Sxf:
+                new.append(math.sqrt(v.imag**2+v.real**2))
+            out.append(new)
+        tm = np.mean( np.array(out), axis=0 )
+        tm2 = []    
+        ff = collections.deque(maxlen=10)
+
+        for v in tm:
+            print(v)
+            ff.append(v)
+            ffo = np.mean(ff,axis=0)
+            tm2.append(ffo)
+        quit()
+
+        d.append(tm2)
+        # mean of columns
+        smoothed = np.mean(np.array(d),axis=0)
+        za.append(smoothed)
+    
+    out = np.array(za) 
+    o = (out/out.max())
+    o[o == np.inf] = 0
+
+    return o
+
 
 # Generate 2D array of SCF data
 def scf(y):
@@ -165,10 +243,10 @@ def process(path,m,i,z,qu):
     
     c = 0
     for q in y:
-        o.append(scf(q[0:SIGLEN]))
+        o.append(scf2(q[0:SIGLEN]))
         oo.append(z)
         c += 1
-        if c > 300:
+        if c > 10:
             break
     
     qu.put((o,oo,m,i,z))
@@ -328,57 +406,51 @@ input_num = inputs
 
 
 def getnet(datain,dataout,modulation):
-
     with tf.Graph().as_default():
-
         t = []
         to = []
-
         te = []
         teo = []
-
-
-        for i in range(0,5):
+        for i in range(0,9):
             c = 0
-            #for noise in range(0,5):    
-            for v in datain[i]:
+            #for noise in range(0,5):
+            b1 = 0
+            b2 = 0
+            din, dino = shuffle_in_unison_inplace(numpy.array(datain[i]),numpy.array(dataout[i]))
+            for v in din:
                 dat = []
                 for zz in range(v.shape[0]):
                     dat.append(v[zz][np.argmax(v[zz])])
-
                 t.append(dat)
-                mod = dataout[i][c]
+                mod = dino[c]
                 print "Mod",mod,"Modul",modulation
                 if (mod == modulation).all():
                     to.append([1])
+                    b1 += 1
                 else:
                     to.append([0])
-
+                    b2 += 1
+                if b1 >= 9 and b2 >= 9:
+                    print("BREAK")
+                    break
                 c += 1
-
         # Model based on https://github.com/aymericdamien/TensorFlow-Examples/blob/master/examples/3_NeuralNetworks/multilayer_perceptron.py
-
         # Parameters
         learning_rate = 0.001
         training_epochs = 10000
         batch_size = 100
         display_step = 10
-
         # Network Parameters
-        n_hidden_1 = 10 #int(input_num / 4.0) # 1st layer number of features
-        n_hidden_2 = 10 #int(input_num / 4.0) # 1st layer number of features
-
+        n_hidden_1 = 15 #int(input_num / 4.0) # 1st layer number of features
+        n_hidden_2 = 15 #int(input_num / 4.0) # 1st layer number of features
         #n_hidden_1 = int(input_num / 4) # 1st layer number of features
         #n_hidden_2 = int(input_num / 4) # 2nd layer number of features
         n_input = input_num 
         n_classes = 1 #len(mod) 
-
         # tf Graph input
         x = tf.placeholder("float", [None, n_input],name="inp")
         y = tf.placeholder("float", [None, n_classes])
-        
         keep_prob = tf.placeholder(tf.float32)
-
         # Create model
         def multilayer_perceptron(x, weights, biases):
             # Hidden layer with RELU activation
@@ -386,111 +458,100 @@ def getnet(datain,dataout,modulation):
             #layer_1 = tf.nn.relu(layer_1)
             layer_1 = tf.sigmoid(tf.matmul(x, weights['h1']) + biases['b1'])
             #drop = tf.nn.dropout(layer_1, keep_prob)
-
             # Hidden layer with RELU activation
+            #layer_2 = tf.sigmoid(tf.matmul(layer_1, weights['h2']) + biases['b2'])
             #layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
             #layer_2 = tf.nn.relu(layer_2)
-
-            
             # Output layer with linear activation
             out_layer = tf.sigmoid(tf.matmul(layer_1, weights['out'],name="out")) # + biases['out'])
             return out_layer
-
         # Store layers weight & bias
         weights = {
             'h1': tf.Variable(tf.random_normal([n_input, n_hidden_1])),
             'h2': tf.Variable(tf.random_normal([n_hidden_1, n_hidden_2])),
             'out': tf.Variable(tf.random_normal([n_hidden_2, n_classes]))
         }
-
         biases = {
             'b1': tf.Variable(tf.random_normal([n_hidden_1])),
             'b2': tf.Variable(tf.random_normal([n_hidden_2])),
             'out': tf.Variable(tf.random_normal([n_classes]))
         }
-
         # Construct model
         pred = multilayer_perceptron(x, weights, biases)
-
         # Define loss and optimizer
         #cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(pred, y))
-
         cost = tf.reduce_mean(-(y * tf.log(pred) + (1 - y) * tf.log(1 - pred))   )
         cost = tf.reduce_mean(tf.square(y - pred)) 
         optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
-
         # Initializing the variables
         init = tf.initialize_all_variables()
-
         # Launch the graph
         #with tf.Session() as sess:
         sess = tf.Session()
         if True:
             sess.run(init)
-            
             # Training cycle
             for epoch in range(training_epochs):
                 avg_cost = 0.
-
                 total_batch = len(t)
-                t, to = shuffle_in_unison_inplace(numpy.array(t),numpy.array(to))
-              
+                #t, to = shuffle_in_unison_inplace(numpy.array(t),numpy.array(to))
                 # Run optimization op (backprop) and cost op (to get loss value)
                 _, c = sess.run([optimizer, cost], feed_dict={x: t, y: to})
-
-                avg_cost += c / total_batch
-
-                    # Display logs per epoch step
+                avg_cost = c
+                # Display logs per epoch step
                 if epoch % display_step == 0:
                     print "Epoch:", '%04d' % (epoch+1), "{:.9f}".format(avg_cost)
-
             return sess, pred, x
 
+"""
 count = 0
-
 nt = [ [] for k in range(len(mod)) ]
-
-
 for m in mod:
-        
     z = np.zeros((len(mod),))
     z[count] = 1
-
     s,pred,x = getnet(train_,train_out,z)
-
     nt[count] = (s,pred,x)
-    
     count += 1
-
-
 for i in range(9):
+    test_i = test[i]
+    good = 0 
+    allv = 0
+    for v in test_i:
+        dat = []
+        for zz in range(v.shape[0]):
+            dat.append(v[zz][np.argmax(v[zz])])
+        p = np.array(np.zeros((len(mod),)))
+        c = 0
+        for n in nt:
+            v = n[0].run(n[1],feed_dict={n[2]: [dat]})[0][0]
+            p[c] = v
+            c += 1
+        if np.argmax(p) == np.argmax(test_out[i][allv]):
+            good += 1
+        allv += 1
+    print "SNR ",i," :  ",float(good)/float(allv)
+"""
+          
+"""          
+with tf.Graph().as_default():
 
-        test_i = test[i]
-
-        good = 0 
-        allv = 0
-
-        for v in test_i:
-            dat = []
-            for zz in range(v.shape[0]):
-                dat.append(v[zz][np.argmax(v[zz])])
-
-            p = np.array(np.zeros((len(mod),)))
-
-            c = 0
-            for n in nt:
-                v = n[0].run(n[1],feed_dict={n[2]: [dat]})[0][0]
-                p[c] = v
-                c += 1
-
-            if np.argmax(p) == np.argmax(test_out[i][allv]):
-                good += 1
-
-            allv += 1
-
-        print "SNR ",i," :  ",float(good)/float(allv)
-                    
-
+t = []
+to = []
+for i in range(9):
+    for i2 in range(len(train_[i])):
+        t.append(train_[i][i2])
+        to.append(train_out[i][i2])
+with tf.Graph().as_default():
+    hidden = 7
+    tflearn.init_graph(num_cores=4)
+    net = None
+    net1 = tflearn.input_data(shape=[None,train_[0][0].shape[0],train_[0][0].shape[1]])
+    net1 = tflearn.fully_connected(net1, hidden,activation='sigmoid') #, activation='sigmoid')
+    net1 = tflearn.fully_connected(net1, len(mod), activation='softmax')
+    regressor = tflearn.regression(net1, optimizer='adam',learning_rate=0.001,loss='categorical_crossentropy') #, loss=lossv)
+    m = tflearn.DNN(regressor,tensorboard_verbose=3)
+    m.fit(t, to, n_epoch=50,shuffle=True, snapshot_epoch=False,show_metric=True)
+"""
 
 
 

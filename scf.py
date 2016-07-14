@@ -81,6 +81,7 @@ for a in np.arange(0,1,0.05):
         
 
 za = np.array(za)
+print (za.shape)
 nx, ny = za.shape[1], za.shape[0]
 x = np.arange(0.5,-0.5,-1/mx)
 y = alph

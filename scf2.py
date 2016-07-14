@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python3
 import matplotlib.pyplot as plot
 import numpy as np
 import sys
@@ -16,28 +16,16 @@ from matplotlib import cm
 from itertools import islice
 from itertools import tee
 za = []
-y = np.fromfile("/tmp/out.dat", dtype=np.complex64)
-y = y[0:1024*20]
 
-d = collections.deque(maxlen=3)
+alldata = np.fromfile("data-2samp/a/fsk-snr0.dat", dtype=np.complex64)
+#alldata = np.fromfile("/tmp/weird.dat", dtype=np.complex64)
 
-FFTsize = 1024*3
-N = int(len(y)/FFTsize)
-T = int(len(y) / N) # Frame length
+#y = np.fromfile("/tmp/ofdm_32kS_10_dB.dat", dtype=np.complex64)
 
-print(N)
+SIGLEN = 20000
 
-Fs = T #*2
-al = 1*Fs
-n = 0
 
-frame = y[(n*int(T)):int(n*T)+int(T)]
-xf = np.fft.fftshift(np.fft.fft(frame))
-xfp = np.append([0]*int(al/2),xf)
-xfm = np.append(xf,[0]*int(al/2))
-Sxf = xfp * np.conj(xfm)
-mx = len(Sxf)
-alph = []
+
 
 def window(iterable, size):
     iters = tee(iterable, size)
@@ -46,85 +34,227 @@ def window(iterable, size):
             next(each, None)
     return zip(*iters)
  
+def scf(y):
 
-for a in np.arange(0,1,0.05):
+    za = []
 
-    
-    Fs = T #*2
-    al = a * Fs
-    alph.append(a)
-    print("A",a)
-    
-    out = []
+    FFTsize = 200
+    N = int(len(y)/FFTsize)
+    T = int(len(y) / N) # Frame length
 
-    count = 0
-    for n in range(0,N):
-    #for frame in window(y,FFTsize):
+    print(T)
+
+    Fs = T 
+    al = Fs
+    n = 0
+    frame = y[(n*int(T)):int(n*T)+int(T)]
+    xf = np.fft.fftshift(np.fft.fft(frame))
+    xfp = np.append([0]*int(al/2),xf)
+    xfm = np.append(xf,[0]*int(al/2))
+    Sxf = xfp * np.conj(xfm)
+    mx = len(Sxf)
+    alph = []
+
+   
+    for a in np.arange(0,1,0.005):
+        Fs = T 
+        al = a * (Fs)
+        alph.append(a)
+        print("A",a)
     
-        count = n
-        frame = y[int(n*T):int(n*T)+T]
-        xf = np.fft.fftshift(np.fft.fft(frame))
+        areal = []
+        aimag = []
+        anew = []
+
+
+        ft = [] 
+        oreal = []
+        oimag = []
+        new = []
+
+        """
+        for n in range(0,N):
+            ov = 0
+            if n > 0:
+                ov = int(((1./100.)*50)*FFTsize)
+            frame = y[int(n*T)-ov:(int(n*T)+T)-ov]
+            ft = np.fft.fftshift(np.fft.fft(frame))
+
+            oreal = []
+            oimag = []
+
+            for v in ft:
+                oreal.append(v.real)
+                oimag.append(v.imag)
+
+            areal.append(oreal)
+            aimag.append(oimag)
+            
+
+        tm1 = np.mean( np.array(areal), axis=0 )
+        tm2 = np.mean( np.array(aimag), axis=0 )
+        tmnew = np.mean( np.array(anew), axis=0 )
+
+        tm3 = tm1 + (1j * tm2)
+    
+
+        xf = tm3
         xfp = np.append([0]*int(al/2),xf)
         xfm = np.append(xf,[0]*int(al/2))
+
+
         np.set_printoptions(threshold=np.nan)
         
-        #Sxf = (1/T) * xfp * np.conj(xfm)
-        Sxf = xfp * np.conj(xfm) 
- 
-        #Sxf = Sxf * (np.e**-(1j*2*np.pi*al*(count*T)))
-    
+        Sxf = xfp * np.conj(xfm)
+
         orig = len(Sxf)
         Sxf.resize((mx,))
         newsize = len(Sxf)
 
         Sxf = np.roll(Sxf,int((newsize-orig)/2))
-
-        new = []
+        
+        tm = []
         for v in Sxf:
-            new.append(math.sqrt(v.imag**2+v.real**2))
-    
-        out.append(new)
-    
-    tm = np.mean( np.array(out), axis=0 )
-
-    tm2 = []    
-    ff = collections.deque(maxlen=20)
-    for v in tm:
-        ff.append(v)
-        ffo = np.mean(ff,axis=0)
-        tm2.append(ffo)
-
-
-
-
-
-    d.append(tm2)
-
-
-
-    # mean of columns
-    smoothed = np.mean(np.array(d),axis=0)
-    za.append(smoothed)
+            tm.append(math.sqrt(v.imag**2+v.real**2))
+        """
         
 
-za = np.array(za)
-nx, ny = za.shape[1], za.shape[0]
+            
+        
 
-x = np.arange(0.5,-0.5,-1/float(mx))
-y = alph
+ 
+        for n in range(0,N):
+        #for frame in window(y,FFTsize):
+            ov = 0
+            if n > 0:
+                ov = int(((1./100.)*50)*FFTsize)
+            frame = y[int(n*T)-ov:(int(n*T)+T)-ov]
+            xf = np.fft.fftshift(np.fft.fft(frame))
+            #xf = np.fft.fft(frame)
 
-hf = plt.figure()
-ha = hf.add_subplot(111, projection='3d')
+            xfp = np.append([0]*int(al/2),xf)
+            xfm = np.append(xf,[0]*int(al/2))
+            np.set_printoptions(threshold=np.nan)
+        
+    
+            Sxf = (xfp * np.conj(xfm)) 
+            
+            orig = len(Sxf)
+            Sxf.resize((mx,))
+            newsize = len(Sxf)
 
-ha.set_xlabel('Frequency')
-ha.set_ylabel('Alpha')
-ha.set_zlabel('SCF')
+            Sxf = np.roll(Sxf,int((newsize-orig)/2))
+ 
+            oreal = []
+            oimag = []
 
-X, Y = numpy.meshgrid(x, y) 
+            for v in Sxf:
+                oreal.append(v.real)
+                oimag.append(v.imag)
+        
 
-ha.plot_surface(X, Y, za,rstride=1, cstride=1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
-plt.show()
-quit()
+            areal.append(oreal)
+            aimag.append(oimag)
+           
+         
+
+        tm1 = np.mean( np.array(areal), axis=0 )
+        tm2 = np.mean( np.array(aimag), axis=0 )
+
+        tm3 = tm1 + (1j * tm2)
+
+        tm = []
+        for v in tm3:
+            mag = math.sqrt(v.imag**2+v.real**2)
+            tm.append(mag)
+
+        
+
+
+
+        #tm = out[len(out)-1]
+
+        #tm2 = []    
+        #ff = collections.deque(maxlen=2)
+        #for v in tm:
+        #    ff.append(v)
+        #    ffo = np.mean(ff,axis=0)
+        #    tm2.append(ffo)
+
+        alph.append(a)
+        za.append(tm)
+       
+    """ 
+    za = np.array(za) 
+    #za = (za/za.mean())
+    #za[za == np.inf] = 0
+    
+    nx, ny = za.shape[1], za.shape[0]
+    
+    print(nx,ny)
+    x = np.arange(nx)
+
+    print(len(x))
+    y = np.arange(ny)
+
+
+    hf = plt.figure()
+    ha = hf.add_subplot(111, projection='3d')
+    ha.set_xlabel('Frequency')
+    ha.set_ylabel('Alpha')
+    ha.set_zlabel('SCF')
+    X, Y = numpy.meshgrid(x, y)
+
+    ha.plot_surface(X, Y, za,rstride=1, cstride=1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
+    plt.show()
+    """
+
+
+
+
+
+
+
+
+
+
+    za = np.array(za)
+
+
+
+
+    dat = []
+    x = []
+    i = 0
+    for zz in range(za.shape[0]):
+        dat.append(za[zz][np.argmax(za[zz])])
+        x.append(i)
+        i += 1
+
+    dat = np.array(dat)
+    #dat /= dat.mean() 
+
+    
+
+
+
+
+    return x,dat,za,mx,alph
+
+allv = np.array_split(alldata,int(len(alldata)/(SIGLEN)))
+
+c = 0
+for z in allv:
+    x,dat,za,mx,alph = scf(z)
+    hf = plt.figure()
+    ha = hf.add_subplot(111)
+
+    ha.set_xlabel('Alpha')
+    ha.set_ylabel('Magnitude')
+
+    ha.plot(x,dat)
+    hf.savefig('/tmp/%d.png' % c)
+    c += 1
 
 print("Shape ",np.array(za).shape)
 plot.imshow(za,aspect='auto' ,cmap='hot')
