@@ -117,7 +117,7 @@ network = regression(network, optimizer='adam',
 
 # Train using classifier
 model = tflearn.DNN(network, tensorboard_verbose=0)
-model.fit(X, Y, n_epoch=50, shuffle=True,show_metric=True, batch_size=96, run_id='cifar10_cnn')
+model.fit(X, Y, n_epoch=50, shuffle=True,show_metric=True, batch_size=1024, run_id='cifar10_cnn')
 
 z = 0
 gd = 0
