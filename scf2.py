@@ -17,7 +17,7 @@ from itertools import islice
 from itertools import tee
 za = []
 
-alldata = np.fromfile("data-2samp/a/fsk-snr0.dat", dtype=np.complex64)
+alldata = np.fromfile("data-20samp/a/8psk-snr0.dat", dtype=np.complex64)
 #alldata = np.fromfile("/tmp/weird.dat", dtype=np.complex64)
 
 #y = np.fromfile("/tmp/ofdm_32kS_10_dB.dat", dtype=np.complex64)
@@ -49,6 +49,8 @@ def scf(y):
     n = 0
     frame = y[(n*int(T)):int(n*T)+int(T)]
     xf = np.fft.fftshift(np.fft.fft(frame))
+    #xf = np.fft.fft(frame)
+
     xfp = np.append([0]*int(al/2),xf)
     xfm = np.append(xf,[0]*int(al/2))
     Sxf = xfp * np.conj(xfm)
@@ -56,7 +58,7 @@ def scf(y):
     alph = []
 
    
-    for a in np.arange(0,1,0.005):
+    for a in np.arange(0.9,1,0.005):
         Fs = T 
         al = a * (Fs)
         alph.append(a)
@@ -123,13 +125,16 @@ def scf(y):
         
 
  
-        for n in range(0,N):
+        for n in np.arange(0,N,1):
         #for frame in window(y,FFTsize):
             ov = 0
-            if n > 0:
-                ov = int(((1./100.)*50)*FFTsize)
+            #if n > 0:
+            #    ov = int(((1./100.)*50)*FFTsize)
             frame = y[int(n*T)-ov:(int(n*T)+T)-ov]
             xf = np.fft.fftshift(np.fft.fft(frame))
+           
+            print(xf)
+            quit() 
             #xf = np.fft.fft(frame)
 
             xfp = np.append([0]*int(al/2),xf)
@@ -155,7 +160,27 @@ def scf(y):
 
             areal.append(oreal)
             aimag.append(oimag)
-           
+          
+
+        print(areal[0],"\n")
+        print(areal[1],"\n")
+
+        a = np.array(areal[0]) 
+        b = np.array(areal[1])
+
+        for v in a:
+            if not v == 0.:
+                print (v)
+                break
+
+
+        for v in b:
+            if not v == 0.:
+                print (v)
+                break
+
+
+        quit() 
          
 
         tm1 = np.mean( np.array(areal), axis=0 )

@@ -14,17 +14,18 @@ import specest
 from tensor import *
 import matplotlib.pylab as plt
 import tflearn
-
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 snr = ["20","15","10","5","0","-5","-10","-15","-20"] 
 snrv = [[1,0.32],[1,0.435],[1,0.56],[1,0.75],[1,1],[0.75,1],[0.56,1],[0.435,1],[0.32,1]]
-mod = ["2psk","4psk","8psk","fsk"]
+mod = ["2psk","fsk","qam16"]
 
-Np = 4
-P = 4
+Np = 100 # 2xNp is the number of columns
+P = 1000  # number of new items needed to calculate estimate
 L = 2
 
 train = False
-input_num = 112
 
 np.set_printoptions(threshold=np.nan)
 
@@ -114,43 +115,33 @@ class my_top_block(gr.top_block):
                 constellation_points=2,
                 mod_code="gray",
                 differential=True,
-                samples_per_symbol=2,
+                samples_per_symbol=5,
                 excess_bw=0.35,
                 verbose=False,
                 log=False,
             )
             bits = 1
-        elif modulation == "4psk":
-            self.digital_mod = digital.psk.psk_mod(
-                constellation_points=4,
-                mod_code="gray",
-                differential=True,
-                samples_per_symbol=2,
-                excess_bw=0.35,
-                verbose=False,
-                log=False,
-            )
-            bits = 2
-        elif modulation == "8psk":
-            self.digital_mod = digital.psk.psk_mod(
-                constellation_points=8,
-                mod_code="gray",
-                differential=True,
-                samples_per_symbol=2,
-                excess_bw=0.35,
-                verbose=False,
-                log=False,
-            )
-            bits = 3
         elif modulation == "fsk":
             self.digital_mod = digital.gfsk_mod(
-        	    samples_per_symbol=2,
+        	    samples_per_symbol=5,
         	    sensitivity=1.0,
         	    bt=0.35,
         	    verbose=False,
         	    log=False,
             )
             bits = 1
+        elif modulation == "qam16":
+            self.digital_mod = digital.qam.qam_mod(
+                constellation_points=16,
+                mod_code="gray",
+                differential=True,
+                samples_per_symbol=5,
+                excess_bw=0.35,
+                verbose=False,
+                log=False,
+            )
+            bits = 1
+
 
         self.sink = blocks.vector_sink_f(2*Np) 
 
@@ -220,135 +211,99 @@ def shuffle_in_unison_inplace(a, b):
 if __name__ == '__main__':
 
     try:
-        inp = []
-        out = [] 
 
         mcount = 0
 
-        for m in mod:
-            """
-            if not (m == "2psk" ):
-                mcount += 1
-                continue
-            """
-            z = np.zeros((len(mod),))
-            z[mcount] = 1        
+        SNVAL = 4
 
-            print(z)
+        def getdata(sn):
+            mcount = 0
             
-            for snr in range(0,1):
-                print(m,"SNR",snr)
-                tb = my_top_block(m,snr)
-                tb.start()
+            inp = [[] for k in range(0,sn)]
+            out = [[] for k in range(0,sn)]
 
-                time.sleep(3)
+            for m in mod:
+                z = np.zeros((len(mod),))
+                z[mcount] = 1    
+    
+                for snr in range(0,sn):
+                    tb = my_top_block(m,snr)
+                    tb.start()
+                    time.sleep(1)
+                    count = 0
+                    fin = False
+                    old = None
+                    while True: 
+                        #data=tb.msgq_out.delete_head().to_string() # this indeed blocks
+                        #data = np.array(tb.specest_cyclo_fam_1.get_estimate())
+                        ## Get last bytes
+                        #floats =  tb.sink.data()#[-2*P*L*(2*Np):] 
+                        floats = np.array(tb.specest_cyclo_fam_1.get_estimate())
 
-                count = 0
-                fin = False
-                old = None
-                while True: 
-                    #data=tb.msgq_out.delete_head().to_string() # this indeed blocks
-                    #data = np.array(tb.specest_cyclo_fam_1.get_estimate())
-                    
-                    ## Get last bytes
-                    #floats =  tb.sink.data()#[-2*P*L*(2*Np):] 
-                    floats = np.array(tb.specest_cyclo_fam_1.get_estimate())
+                        if old == None:
+                            old = floats
+                        else:
+                            if (floats == old).all():
+                                continue
+                        count = count + 1  
+                        if True:
 
-                    if old == None:
-                        old = floats
-                    else:
-                        if (floats == old).all():
-                            continue
+                            za = floats
+                            nx, ny = za.shape[1], za.shape[0]
+    
+                            x = np.arange(nx)
+                            y = np.arange(ny)
+
+                            """
+                            hf = plt.figure()
+                            ha = hf.add_subplot(111, projection='3d')
+                            ha.set_xlabel('Frequency')
+                            ha.set_ylabel('Alpha')
+                            ha.set_zlabel('SCF')
+                            X, Y = numpy.meshgrid(x, y)
+
+                            ha.plot_surface(X, Y, za,rstride=1, cstride=1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
+                            plt.show()
+                            """
+
+                            xx = []
+                            dat = []
+                            i = 0
+                            for v in za:
+                                dat.append(v[np.argmax(v)])
+                                xx.append(i)
+                                i+=1
+
                 
-                    count = count + 1  
-        
-                    if count % 20 == 0:
-                        f = floats.flatten()
-                                                                                                                                                                                                                                  
-                        o2 = np.array(f)
-                        #print(o2)
+                            #f = floats.flatten()
+                            #o2 = np.array(f)
+                            #o = ((o2-o2.mean())/np.std(o2))
+                            #o[o == np.inf] = 0   
+                            inp[snr].append(np.array(dat))
+                            out[snr].append(np.array(z))
 
-                        o = ((o2-o2.mean())/np.std(o2))                                                                                                                                                                                         
-                        o[o == np.inf] = 0                                                                                                                                                                                          
-                        #print(o)
-                        #quit()
-                        inp.append(o)
-                        out.append(z)
+                        if count % 10:
+                            print(count)
 
-                    if count > 200000:
-                        break
 
-                    old = floats
-                    
-                    #print(floats.shape)
-
-                    #quit()
-                    #print(len(floats)/128)
-                    #data = np.asarray(estimated_data)
-                   
-    
-                 
-                    """ 
-                    print("SH",data.shape)
-    
-                    inp.append(data)
-                    out.append(z)
-                    count += 1
-                    #if count > 5:
-    
-                    if count > 10:
-                        tb.stop()
-                        break
-                    print("COUNT ",count)
-                    """
-                    #Np = 32                                                                                                                               
-                    #P  = 128                                                                                                                              
-                    #L  = Np/8 
-               
-                    """
-                    floats = []
-                   
-                    for i in range(0,len(data),4):
-                        floats.append(struct.unpack_from('f',data[i:i+4])[0])
-                    
-                    print("ll",len(floats))
-                    """
-                
-                    """
-                    for i in range(0, len(floats),input_num):
-                        dat = floats[i:i+(input_num)]
-
-                        if not len(dat) == input_num:
+                        if count > 400:
                             break
-                        inp.append(np.array(dat))
-                        out.append(z)
-                        
-                        if count > 1000:
-                            break 
-                        count += 1
-            
-                    break
-                    """
-                    
 
-                    
-            #break
-                            
-            mcount += 1
-
-
+                        old = floats
+                mcount += 1     
+            return np.array(inp),np.array(out)
+                
 
         
 
-        inp, out = shuffle_in_unison_inplace(np.array(inp), np.array(out))
+        #inp, out = shuffle_in_unison_inplace(np.array(inp), np.array(out))
     
-        test_i = inp[len(inp)/2:len(inp)]
-        test_o = out[len(inp)/2:len(inp)]
+        test_i , test_o = getdata(9)
+        train_i , train_o = getdata(3)
 
-        print(len(test_i),len(test_o))
         
-        train_i = inp[0:len(inp)/2]
-        train_o = out[0:len(inp)/2]
+
+        """
 
         print(len(train_i),len(train_o))
 
@@ -357,13 +312,13 @@ if __name__ == '__main__':
         #print("NEURONS",inp[0].shape[0]*inp[0].shape[1])
         # Parameters
         learning_rate = 0.001
-        training_epochs = 50
+        training_epochs = 1000
         batch_size = 100
         display_step = 1
 
         # Network Parameters
-        n_hidden_1 = input_num / 5 # 1st layer number of features
-        n_hidden_2 = input_num / 5 # 2nd layer number of features
+        n_hidden_1 = (input_num / 5 )# 1st layer number of features
+        n_hidden_2 =( input_num / 5) # 2nd layer number of features
         n_input = input_num # MNIST data input (img shape: 28*28)
         n_classes = len(mod) # MNIST total classes (0-9 digits)
 
@@ -378,10 +333,10 @@ if __name__ == '__main__':
             layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
             layer_1 = tf.nn.relu(layer_1)
             # Hidden layer with RELU activation
-            layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
-            layer_2 = tf.nn.relu(layer_2)
+            # layer_2 = tf.add(tf.matmul(layer_1, weights['h2']), biases['b2'])
+            # layer_2 = tf.nn.relu(layer_2)
             # Output layer with linear activation
-            out_layer = tf.matmul(layer_2, weights['out']) + biases['out']
+            out_layer = tf.matmul(layer_1, weights['out']) + biases['out']
             return out_layer
 
         # Store layers weight & bias
@@ -444,49 +399,35 @@ if __name__ == '__main__':
             print "Accuracy:", accuracy.eval({x: test_i, y: test_o})
 
         quit()
+        """
     
+        input_num = len(train_i[0][0])
         
+        t=[]
+        to=[]
+        
+        for i in range(0,SNVAL):
+            for v in range(0,len(train_i[i])):
+                t.append(train_i[i][v])
+                to.append(train_o[i][v])
+            
         
         with tf.Graph().as_default():
-
-
-            """
-            hidden = int(input_num * (0.89))
+            hidden = int(input_num * (0.2))
             tflearn.init_graph(num_cores=8)
-            net = tflearn.input_data(shape=[None,inp[0].shape[0],inp[0].shape[1]])
+            net = tflearn.input_data(shape=[None,t[0].shape[0]])
             net = tflearn.fully_connected(net, hidden,activation='sigmoid') #, activation='sigmoid')
             #net = tflearn.dropout(net, 0.8)
             net = tflearn.fully_connected(net, len(mod), activation='softmax')
             regressor = tflearn.regression(net, optimizer='adam',learning_rate=0.001,loss='categorical_crossentropy') #, loss=lossv)
             m = tflearn.DNN(regressor,tensorboard_verbose=3) 
-            """
+            
 
-            if train:
-                m.fit(inp, out, n_epoch=50, snapshot_epoch=False,show_metric=True)
-                m.save("fam.ann")
+            m.fit(t, to, n_epoch=50, snapshot_epoch=False,show_metric=True)
 
-            else:
-                m.load("fam.ann")
-
-                print(inp[1])
-                print("---")
-                print(inp[2])
-                print("---")
-                print(inp[3])
-                if (inp[1] == inp[100]).all():
-                    print("error")
-                    quit()
-                ret = m.predict(inp)
-
-
-                #for v in ret:
-                #    print(np.argmax(v))
-
-                #print(ret[0])
-                #print(out[0])
-
-
-                print(100.0 * np.sum(np.argmax(ret, 1) == np.argmax(out, 1))/ len(ret))
+            for i in range(0,9):
+                ret = m.predict(test_i[i])
+                print(100.0 * np.sum(np.argmax(ret, 1) == np.argmax(test_o[i], 1))/ len(ret))
 
         quit()
             

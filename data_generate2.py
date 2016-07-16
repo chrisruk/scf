@@ -72,7 +72,7 @@ class my_top_block(gr.top_block):
 
         self.analog_random_source_x_0 = blocks.vector_source_b(map(int, numpy.random.randint(0, 256, 80000)), False)
 
-        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, "data-5samp/a/%s-snr%d.dat" % (modulation,snr), False)
+        self.blocks_file_sink_0 = blocks.file_sink(gr.sizeof_gr_complex*1, "/tmp/%s-snr%d.dat" % (modulation,snr), False)
 
         self.connect((self.analog_noise_source_x_0, 0), (self.blocks_add_xx_1, 1))    
         self.connect((self.blocks_multiply_const_vxx_3, 0), (self.blocks_add_xx_1, 0))    
