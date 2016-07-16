@@ -51,16 +51,16 @@ mod = sorted(set(allm))
 for m in mod:
     dat = []
     for k in radioml.keys():
-        if k[0] == m and k[1] == 18:
+        if k[0] == m :
             for sig in range(len(radioml[k])):
     
                 a = numpy.array(radioml[k][sig][0])[:, newaxis]
                 b = numpy.array(radioml[k][sig][1])[:, newaxis]
 
-                if 18 not in data[k[0]]:
-                    data[k[0]][18] = []
+                if k[1] not in data[k[0]]:
+                    data[k[0]][k[1]] = []
 
-                data[k[0]][18].append([a,b])
+                data[k[0]][k[1]].append([a,b])
 
                 
             
@@ -73,8 +73,9 @@ print (data["WBFM"][18][1])
 
 X = []
 Y = []
-x = []
-y = [] 
+
+x = {}
+y = {} 
 
 
 mval = {}
@@ -87,14 +88,20 @@ for m in mod:
     z[count] = 1     
     mval[m] = z
 
-    dat = data[m][18]
+    for snr in data[m]:
+        dat = data[m][snr]
     
-    for d in dat[:len(dat)//2]:
-        X.append(d)
-        Y.append(z)
-    for d in dat[len(dat)//2:]:
-        x.append(d)
-        y.append(z)
+        for d in dat[:len(dat)//2]:
+            X.append(d)
+            Y.append(z)
+        for d in dat[len(dat)//2:]:
+
+            if not snr in x:
+                x[snr] = []
+                y[snr] = []
+
+            x[snr].append(d)
+            y[snr].append(z)
 
     count += 1    
 
@@ -117,18 +124,18 @@ network = regression(network, optimizer='adam',
 
 # Train using classifier
 model = tflearn.DNN(network, tensorboard_verbose=0)
-model.fit(X, Y, n_epoch=50, shuffle=True,show_metric=True, batch_size=1024, run_id='cifar10_cnn')
+model.fit(X, Y, n_epoch=1, shuffle=True,show_metric=True, batch_size=1024)
 
-z = 0
-gd = 0
-
-for v in x:
-    if np.argmax(model.predict ( [ v ])[0]) == np.argmax(y[z]):
-        gd += 1
-
-    z = z + 1
+for snr in x:
+    gd = 0
+    z = 0
+    allv = x[snr]
+    for v in allv:
+        if np.argmax(model.predict ( [ v ])[0]) == np.argmax(y[snr][z]):
+            gd += 1
+        z = z + 1
     
-print ("ACC",gd/z)
+    print ("SNR",snr,"ACC",gd/z)
 
 
 
