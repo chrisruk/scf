@@ -73,34 +73,30 @@ print (data["WBFM"][18][1])
 
 X = []
 Y = []
-
-
-
-bpsk = data["BPSK"][18]
-wbfm = data["WBFM"][18]
-
-
-
-for v in bpsk[:len(bpsk)//2]:
-    X.append(v)
-    Y.append([1.,0.])
-
-
-for v in wbfm[:len(wbfm)//2]:
-    X.append(v)
-    Y.append([0.,1.])
-
 x = []
-y = []
-
-for v in bpsk[len(bpsk)//2:]:
-    x.append(v)
-    y.append([1.,0.])
+y = [] 
 
 
-for v in wbfm[len(wbfm)//2:]:
-    x.append(v)
-    y.append([0.,1.])
+mval = {}
+
+count = 0
+
+for m in mod:
+
+    z = np.zeros((len(mod),))                                                                                                                                                                               
+    z[count] = 1     
+    mval[m] = z
+
+    dat = data[m][18]
+    
+    for d in dat[:len(dat)//2]:
+        X.append(d)
+        Y.append(z)
+    for d in dat[len(dat)//2:]:
+        x.append(d)
+        y.append(z)
+
+    count += 1    
 
 
 
@@ -113,7 +109,7 @@ print(tflearn.utils.get_incoming_shape(network))
 network = conv_2d(network, 64,[1,3], activation='relu')
 network = conv_2d(network, 16,[2,3], activation='relu')
 network = fully_connected(network, 128, activation='relu')
-network = fully_connected(network, 2, activation='softmax')
+network = fully_connected(network, len(mod), activation='softmax')
 
 network = regression(network, optimizer='adam',
                      loss='categorical_crossentropy',
