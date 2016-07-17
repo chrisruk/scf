@@ -26,12 +26,12 @@ mod = ["2psk","fsk","qam16"]
 mod = ["2psk","2psk","fsk","qam16"]
 
 Np = 100 # 2xNp is the number of columns
-P = 1000  # number of new items needed to calculate estimate
+P = 1000 # number of new items needed to calculate estimate
 L = 2
 
 np.set_printoptions(threshold=np.nan)
 
-class my_top_block(gr.top_block):
+class fam_generate(gr.top_block):
     def __init__(self,modulation,snr):
 
         self.samp_rate = samp_rate = 32000
@@ -48,8 +48,6 @@ class my_top_block(gr.top_block):
                 verbose=False,
                 log=False,
             )
-            bits = 1
-
         elif modulation == "4psk":
             self.digital_mod = digital.psk.psk_mod(
                 constellation_points=4,
@@ -60,7 +58,6 @@ class my_top_block(gr.top_block):
                 verbose=False,
                 log=False,
             )
-            bits = 1
         elif modulation == "8psk":
             self.digital_mod = digital.psk.psk_mod(
                 constellation_points=4,
@@ -71,9 +68,6 @@ class my_top_block(gr.top_block):
                 verbose=False,
                 log=False,
             )
-            bits = 1
-
-
 
         elif modulation == "fsk":
             self.digital_mod = digital.gfsk_mod(
@@ -83,7 +77,6 @@ class my_top_block(gr.top_block):
         	    verbose=False,
         	    log=False,
             )
-            bits = 1
         elif modulation == "qam16":
             self.digital_mod = digital.qam.qam_mod(
                 constellation_points=16,
@@ -94,13 +87,9 @@ class my_top_block(gr.top_block):
                 verbose=False,
                 log=False,
             )
-            bits = 1
-
 
         self.sink = blocks.vector_sink_f(2*Np) 
-
         self.sink = blocks.null_sink(gr.sizeof_float * 2 * Np)    
-
         self.blocks_add_xx_1 = blocks.add_vcc(1)
         self.specest_cyclo_fam_1 = specest.cyclo_fam(Np, P, L)
         self.blocks_multiply_const_vxx_3 = blocks.multiply_const_vcc((snrv[snr][0], ))
@@ -114,33 +103,10 @@ class my_top_block(gr.top_block):
         self.connect((self.analog_noise_source_x_0, 0), (self.blocks_add_xx_1, 1))    
         self.connect((self.blocks_multiply_const_vxx_3, 0), (self.blocks_add_xx_1, 0))    
         self.connect((self.analog_random_source_x_0, 0), (self.digital_mod, 0)) 
-        #self.connect((self.digital_mod, 0), (self.blocks_throttle_0, 0))  
         self.connect((self.digital_mod, 0), (self.blocks_throttle_0, 0))    
         self.connect((self.blocks_throttle_0, 0),(self.blocks_multiply_const_vxx_3, 0))    
-
-        #self.connect((self.digital_mod, 0), (self.blocks_multiply_const_vxx_3, 0))    
-        # self.connect((self.blocks_throttle_0, 0),(self.blocks_multiply_const_vxx_3, 0))    
         self.connect((self.blocks_add_xx_1, 0),(self.specest_cyclo_fam_1, 0))    
-        #self.connect((self.specest_cyclo_fam_1,0),(self.blocks_message_sink_0,0))
-
-
-        #self.connect((self.specest_cyclo_fam_1, 0), (self.blocks_vector_to_stream_0, 0))
-        #self.connect((self.blocks_stream_to_vector_0, 0), (self.inspector_TFModel_0, 0))   
-        #self.msg_connect((self.inspector_TFModel_0, 'classification'), (self.blocks_message_debug_0, 'print'))         
         self.connect((self.specest_cyclo_fam_1,0),(self.sink,0))
-
-
-
-
-
-
-
-def shuffle_in_unison_inplace(a, b):
-    assert len(a) == len(b)
-    p = numpy.random.permutation(len(a))
-    return a[p], b[p]
-
-
 
 if __name__ == '__main__':
 
@@ -161,17 +127,13 @@ if __name__ == '__main__':
                 z[mcount] = 1    
     
                 for snr in range(0,sn):
-                    tb = my_top_block(m,snr)
+                    tb = fam_generate(m,snr)
                     tb.start()
                     time.sleep(1)
                     count = 0
                     fin = False
                     old = None
                     while True: 
-                        #data=tb.msgq_out.delete_head().to_string() # this indeed blocks
-                        #data = np.array(tb.specest_cyclo_fam_1.get_estimate())
-                        ## Get last bytes
-                        #floats =  tb.sink.data()#[-2*P*L*(2*Np):] 
                         floats = np.array(tb.specest_cyclo_fam_1.get_estimate())
 
                         if old == None:
@@ -179,7 +141,9 @@ if __name__ == '__main__':
                         else:
                             if (floats == old).all():
                                 continue
+                        
                         count = count + 1  
+                        
                         if True:
 
                             za = floats
@@ -189,6 +153,7 @@ if __name__ == '__main__':
                             y = np.arange(ny)
 
                             """
+                            Generate 3D graph
                             hf = plt.figure()
                             ha = hf.add_subplot(111, projection='3d')
                             ha.set_xlabel('Frequency')
@@ -217,31 +182,17 @@ if __name__ == '__main__':
 
                             ha.plot(xx,dat)
                             hf.savefig('/tmp/%s.png'%m)   # save the figure to file
-                            #f = floats.flatten()
-                            #o2 = np.array(f)
-                            #o = ((o2-o2.mean())/np.std(o2))
-                            #o[o == np.inf] = 0   
+                            
                             inp[snr].append(np.array(dat))
                             out[snr].append(np.array(z))
 
-                        if count % 10:
-                            print(count)
-
-
-                        if count > 400:
+                        if count > 20:
                             break
 
                         old = floats
                 mcount += 1     
             return np.array(inp),np.array(out)
-                
-
         
-
-        #inp, out = shuffle_in_unison_inplace(np.array(inp), np.array(out))
     
         test_i , test_o = getdata(9)
         train_i , train_o = getdata(3)
-
-        
-
