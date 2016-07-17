@@ -124,9 +124,9 @@ network = regression(network, optimizer='adam',
 
 # Train using classifier
 model = tflearn.DNN(network, tensorboard_verbose=0)
-model.fit(X, Y, n_epoch=1, shuffle=True,show_metric=True, batch_size=1024)
+model.fit(X, Y, n_epoch=100, shuffle=True,show_metric=True, batch_size=1024)
 
-for snr in x:
+for snr in sorted(x):
     gd = 0
     z = 0
     allv = x[snr]
