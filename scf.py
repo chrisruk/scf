@@ -29,18 +29,10 @@ Fs = T #*2
 al = 1*Fs
 n = 0
 mx = 0
-"""
-frame = y[(n*int(T)):int(n*T)+int(T)]
-xf = np.fft.fftshift(np.fft.fft(frame))
-xfp = np.append([0]*int(al/2),xf)
-xfm = np.append(xf,[0]*int(al/2))
-Sxf = (1/T) * xfp * np.conj(xfm)
-Sxf = Sxf * (np.e**-(1j*2*np.pi*al*(N*T)))
-mx = len(Sxf)"""
 alph = []
 print(T)
 
-for a in np.arange(0,T):
+for a in np.arange(0,int(0.4*T)):
 
     areal = []
     aimag = []
@@ -58,8 +50,6 @@ for a in np.arange(0,T):
         count = n
         frame = y[int(n*T):int(n*T)+T]
         xf = np.fft.fftshift(np.fft.fft(frame))
-        #xfp = np.append([0]*int(al/2),xf)
-        #xfm = np.append(xf,[0]*int(al/2))
         xfp = np.roll(xf,-a)
         xfm = np.roll(xf,a)
         Sxf = xfp * np.conj(xfm) 
