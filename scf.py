@@ -21,17 +21,9 @@ y = y[0:5000]
 
 d = collections.deque(maxlen=1)
 
-FFTsize = 200
-N = int(len(y)/FFTsize)
-T = int(len(y) / N) # Frame length
-
-Fs = T #*2
-al = 1*Fs
-n = 0
-mx = 0
+FFTsize = 100
+T = FFTsize
 alph = []
-print(T)
-
 
 def window(iterable, size):
     iters = tee(iterable, size)
@@ -39,7 +31,6 @@ def window(iterable, size):
         for each in iters[i:]:
             next(each, None)
     return zip(*iters)
-
 
 for a in np.arange(0,T,1):
 
@@ -50,21 +41,27 @@ for a in np.arange(0,T,1):
     alph.append(a)
 
     print("Alph",a)
-    
     out = []
 
     count = 0
     #for n in range(0,N):
-    # Has to be a sliding window, to get same results as in gallery of SCFs
     for frame in window(y,FFTsize):
-        count = n
-        frame = y[int(n*T):int(n*T)+T]
+        
         xf = np.fft.fftshift(np.fft.fft(frame))
 
+
+        x2 = []
+        for v in xf:
+            x2.append((1/float(len(xf))) *   np.abs(v)**2   )
+
+        xf = np.array(x2)
+
+
         xfp = np.roll(xf,-a)
+
         xfm = np.roll(xf,a)
-        Sxf =  xfp * np.conj(xfm) 
-        mx = len(Sxf)
+        Sxf =  (1/float(T)) * xfp * np.conj(xfm) 
+    
 
         oreal = []
         oimag = []
@@ -79,14 +76,16 @@ for a in np.arange(0,T,1):
             oreal.append(v.real)
             oimag.append(v.imag)
 
+
+
         areal.append(oreal)
         aimag.append(oimag) 
+
 
     tm1 = np.mean( np.array(areal), axis=0 )
     tm2 = np.mean( np.array(aimag), axis=0 )
     tm3 = tm1 + (1j * tm2)
    
-    
     for z in range(0,a):
         tm3[z] = 0
         tm3[len(Sxf)-z-1]=0  
@@ -103,7 +102,7 @@ for a in np.arange(0,T,1):
 za = np.array(za)
 print (za.shape)
 nx, ny = za.shape[1], za.shape[0]
-x = np.arange(0.5,-0.5,-1/mx)
+x = np.arange(0.5,-0.5,-1/nx)
 y = alph
 
 hf = plt.figure()
