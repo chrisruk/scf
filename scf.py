@@ -14,10 +14,10 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from itertools import islice
-
+from itertools import tee  
 za = []
 y = np.fromfile("/tmp/out.dat", dtype=np.complex64)
-y = y[0:10000]
+y = y[0:5000]
 
 d = collections.deque(maxlen=1)
 
@@ -32,7 +32,16 @@ mx = 0
 alph = []
 print(T)
 
-for a in np.arange(0,int(0.4*T)):
+
+def window(iterable, size):
+    iters = tee(iterable, size)
+    for i in range(1, size):
+        for each in iters[i:]:
+            next(each, None)
+    return zip(*iters)
+
+
+for a in np.arange(0,T,1):
 
     areal = []
     aimag = []
@@ -45,22 +54,26 @@ for a in np.arange(0,int(0.4*T)):
     out = []
 
     count = 0
-    for n in range(0,N):
-
+    #for n in range(0,N):
+    # Has to be a sliding window, to get same results as in gallery of SCFs
+    for frame in window(y,FFTsize):
         count = n
         frame = y[int(n*T):int(n*T)+T]
         xf = np.fft.fftshift(np.fft.fft(frame))
+
         xfp = np.roll(xf,-a)
         xfm = np.roll(xf,a)
-        Sxf = xfp * np.conj(xfm) 
+        Sxf =  xfp * np.conj(xfm) 
         mx = len(Sxf)
 
         oreal = []
         oimag = []
-        
+            
+        """
         for z in range(0,a):
             Sxf[z] = 0
             Sxf[len(Sxf)-z-1]=0  
+        """
 
         for v in Sxf:
             oreal.append(v.real)
@@ -72,7 +85,14 @@ for a in np.arange(0,int(0.4*T)):
     tm1 = np.mean( np.array(areal), axis=0 )
     tm2 = np.mean( np.array(aimag), axis=0 )
     tm3 = tm1 + (1j * tm2)
+   
     
+    for z in range(0,a):
+        tm3[z] = 0
+        tm3[len(Sxf)-z-1]=0  
+    
+   
+ 
     tm = []
     for v in tm3:
         mag = math.sqrt(v.imag**2+v.real**2)
