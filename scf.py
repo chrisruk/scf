@@ -17,33 +17,38 @@ from itertools import islice
 
 za = []
 y = np.fromfile("/tmp/out.dat", dtype=np.complex64)
-y = y[0:1024*100]
+y = y[0:10000]
 
-d = collections.deque(maxlen=10)
+d = collections.deque(maxlen=1)
 
-N = 100             # Number of frames
+FFTsize = 200
+N = int(len(y)/FFTsize)
 T = int(len(y) / N) # Frame length
 
 Fs = T #*2
 al = 1*Fs
 n = 0
-
+mx = 0
+"""
 frame = y[(n*int(T)):int(n*T)+int(T)]
 xf = np.fft.fftshift(np.fft.fft(frame))
 xfp = np.append([0]*int(al/2),xf)
 xfm = np.append(xf,[0]*int(al/2))
 Sxf = (1/T) * xfp * np.conj(xfm)
 Sxf = Sxf * (np.e**-(1j*2*np.pi*al*(N*T)))
-mx = len(Sxf)
+mx = len(Sxf)"""
 alph = []
+print(T)
 
-for a in np.arange(0,1,0.05):
+for a in np.arange(0,T):
 
-
+    areal = []
+    aimag = []
+    
     Fs = T #*2
-    al = a * Fs
     alph.append(a)
-    print("Alph",al)
+
+    print("Alph",a)
     
     out = []
 
@@ -53,32 +58,37 @@ for a in np.arange(0,1,0.05):
         count = n
         frame = y[int(n*T):int(n*T)+T]
         xf = np.fft.fftshift(np.fft.fft(frame))
-        xfp = np.append([0]*int(al/2),xf)
-        xfm = np.append(xf,[0]*int(al/2))
-        np.set_printoptions(threshold=np.nan)
+        #xfp = np.append([0]*int(al/2),xf)
+        #xfm = np.append(xf,[0]*int(al/2))
+        xfp = np.roll(xf,-a)
+        xfm = np.roll(xf,a)
+        Sxf = xfp * np.conj(xfm) 
+        mx = len(Sxf)
+
+        oreal = []
+        oimag = []
         
-        Sxf = (1/T) * xfp * np.conj(xfm) 
-        Sxf = Sxf * (np.e**-(1j*2*np.pi*al*(count*T)))
-    
-        orig = len(Sxf)
-        Sxf.resize((mx,))
-        newsize = len(Sxf)
+        for z in range(0,a):
+            Sxf[z] = 0
+            Sxf[len(Sxf)-z-1]=0  
 
-        Sxf = np.roll(Sxf,int((newsize-orig)/2))
-
-        new = []
         for v in Sxf:
-            new.append(math.sqrt(v.imag**2+v.real**2))
-    
-        out.append(new)
-    
-    tm = np.mean( np.array(out), axis=0 )
-    d.append(tm)
+            oreal.append(v.real)
+            oimag.append(v.imag)
 
-    # mean of columns
-    smoothed = np.mean(np.array(d),axis=0)
-    za.append(smoothed)
-        
+        areal.append(oreal)
+        aimag.append(oimag) 
+
+    tm1 = np.mean( np.array(areal), axis=0 )
+    tm2 = np.mean( np.array(aimag), axis=0 )
+    tm3 = tm1 + (1j * tm2)
+    
+    tm = []
+    for v in tm3:
+        mag = math.sqrt(v.imag**2+v.real**2)
+        tm.append(mag)
+
+    za.append(tm)
 
 za = np.array(za)
 print (za.shape)
