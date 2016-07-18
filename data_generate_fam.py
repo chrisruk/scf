@@ -19,11 +19,9 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from tensor import *
 
-
 snr = ["20","15","10","5","0","-5","-10","-15","-20"] 
 snrv = [[1,0.32],[1,0.435],[1,0.56],[1,0.75],[1,1],[0.75,1],[0.56,1],[0.435,1],[0.32,1]]
 mod = ["2psk","fsk","qam16"]
-mod = ["2psk","2psk","fsk","qam16"]
 
 Np = 100 # 2xNp is the number of columns
 P = 1000 # number of new items needed to calculate estimate
@@ -108,91 +106,87 @@ class fam_generate(gr.top_block):
         self.connect((self.blocks_add_xx_1, 0),(self.specest_cyclo_fam_1, 0))    
         self.connect((self.specest_cyclo_fam_1,0),(self.sink,0))
 
+
+def getdata(sn):
+    mcount = 0
+    inp = [[] for k in range(0,sn)]
+    out = [[] for k in range(0,sn)]
+
+    for m in mod:
+
+        z = np.zeros((len(mod),))
+        z[mcount] = 1    
+    
+        for snr in range(0,sn):
+
+            tb = fam_generate(m,snr)
+            tb.start()
+            time.sleep(1)
+            count = 0
+            fin = False
+            old = None
+
+            while True: 
+                floats = np.array(tb.specest_cyclo_fam_1.get_estimate())
+
+                if old == None:
+                    old = floats
+                else:
+                    if (floats == old).all():
+                        continue        
+                count = count + 1  
+                        
+                za = floats
+                nx, ny = za.shape[1], za.shape[0]
+                x = np.arange(nx)
+                y = np.arange(ny)
+
+                """
+                 Generate 3D graph
+                 hf = plt.figure()
+                 ha = hf.add_subplot(111, projection='3d')
+                 ha.set_xlabel('Frequency')
+                 ha.set_ylabel('Alpha')
+                 ha.set_zlabel('SCF')
+                 X, Y = numpy.meshgrid(x, y)
+                 ha.plot_surface(X, Y, za,rstride=1, cstride=1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
+                 plt.show()
+                """
+
+                xx = []
+                dat = []
+                i = 0
+                for v in za:
+                    dat.append(v[np.argmax(v)])
+                    xx.append(i)
+                    i+=1
+
+                            
+                hf = plt.figure()
+                ha = hf.add_subplot(111)
+                ha.set_xlabel('Alpha')
+                ha.set_ylabel('Magnitude')
+                ha.set_title(m)
+                ha.plot(xx,dat)
+                hf.savefig('/tmp/%s.png'%m)   # save the figure to file
+                plt.close(hf)
+
+                inp[snr].append(np.array(dat))
+                out[snr].append(np.array(z))
+
+                if count > 20:
+                    break
+
+                old = floats
+                mcount += 1
+
+    return np.array(inp),np.array(out)
+
+
 if __name__ == '__main__':
 
-    try:
+    mcount = 0
+    SNVAL = 4
 
-        mcount = 0
-
-        SNVAL = 4
-
-        def getdata(sn):
-            mcount = 0
-            
-            inp = [[] for k in range(0,sn)]
-            out = [[] for k in range(0,sn)]
-
-            for m in mod:
-                z = np.zeros((len(mod),))
-                z[mcount] = 1    
-    
-                for snr in range(0,sn):
-                    tb = fam_generate(m,snr)
-                    tb.start()
-                    time.sleep(1)
-                    count = 0
-                    fin = False
-                    old = None
-                    while True: 
-                        floats = np.array(tb.specest_cyclo_fam_1.get_estimate())
-
-                        if old == None:
-                            old = floats
-                        else:
-                            if (floats == old).all():
-                                continue
-                        
-                        count = count + 1  
-                        
-                        if True:
-
-                            za = floats
-                            nx, ny = za.shape[1], za.shape[0]
-    
-                            x = np.arange(nx)
-                            y = np.arange(ny)
-
-                            """
-                            Generate 3D graph
-                            hf = plt.figure()
-                            ha = hf.add_subplot(111, projection='3d')
-                            ha.set_xlabel('Frequency')
-                            ha.set_ylabel('Alpha')
-                            ha.set_zlabel('SCF')
-                            X, Y = numpy.meshgrid(x, y)
-
-                            ha.plot_surface(X, Y, za,rstride=1, cstride=1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
-                            plt.show()
-                            """
-
-                            xx = []
-                            dat = []
-                            i = 0
-                            for v in za:
-                                dat.append(v[np.argmax(v)])
-                                xx.append(i)
-                                i+=1
-
-                            
-                            hf = plt.figure()
-                            ha = hf.add_subplot(111)
-                            ha.set_xlabel('Alpha')
-                            ha.set_ylabel('Magnitude')
-                            ha.set_title(m)
-
-                            ha.plot(xx,dat)
-                            hf.savefig('/tmp/%s.png'%m)   # save the figure to file
-                            
-                            inp[snr].append(np.array(dat))
-                            out[snr].append(np.array(z))
-
-                        if count > 20:
-                            break
-
-                        old = floats
-                mcount += 1     
-            return np.array(inp),np.array(out)
-        
-    
-        test_i , test_o = getdata(9)
-        train_i , train_o = getdata(3)
+    test_i , test_o = getdata(9)
+    train_i , train_o = getdata(3)

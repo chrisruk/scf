@@ -32,7 +32,16 @@ def window(iterable, size):
             next(each, None)
     return zip(*iters)
 
-for a in np.arange(0,T,1):
+for a in np.arange(0,100,1):
+
+
+    alpha = a*(1/T)
+
+    # when a == 1, alpha = 2*1/N
+    print (alpha)
+
+
+
 
     areal = []
     aimag = []
@@ -44,66 +53,74 @@ for a in np.arange(0,T,1):
     out = []
 
     count = 0
-    #for n in range(0,N):
+    nth = 0
+    sxfs = []
+    ffts = []
+
     for frame in window(y,FFTsize):
-        
-        xf = np.fft.fftshift(np.fft.fft(frame))
+        ffts.append(frame)
 
+    blocks = len(y)//T
+    #for i in range(blocks):
+    #   ffts.append( y[int(i*T):int(i*T)+T] )
 
+    for frame in ffts:
+        xf = np.array(np.fft.fftshift(np.fft.fft(frame)))
+
+        # Smooth periodogram
         x2 = []
         for v in xf:
-            x2.append((1/float(len(xf))) *   np.abs(v)**2   )
+            x2.append((1.0/float(len(xf))) * np.abs(v)**2   )
 
         xf = np.array(x2)
-
-
         xfp = np.roll(xf,-a)
-
         xfm = np.roll(xf,a)
-        Sxf =  (1/float(T)) * xfp * np.conj(xfm) 
-    
 
-        oreal = []
-        oimag = []
-            
-        """
-        for z in range(0,a):
-            Sxf[z] = 0
-            Sxf[len(Sxf)-z-1]=0  
-        """
+        Ia = (1/float(T)) * xfp * np.conj(xfm)
+        expv = np.exp(-1j*2.0*np.pi*alpha*nth) #*(alpha)*j*T)
+        print("Val ",expv,"alpha: ",alpha)
+        Sxf = Ia*expv        
+        sxfs.append(Sxf)
 
+        reals = []
+        imags = []
         for v in Sxf:
-            oreal.append(v.real)
-            oimag.append(v.imag)
+            reals.append(v.real)
+            imags.append(v.imag)
 
+        areal.append(reals)
+        aimag.append(imags)
 
+        nth+=1.0
 
-        areal.append(oreal)
-        aimag.append(oimag) 
-
-
-    tm1 = np.mean( np.array(areal), axis=0 )
-    tm2 = np.mean( np.array(aimag), axis=0 )
-    tm3 = tm1 + (1j * tm2)
-   
+    sx = np.mean(areal,axis=0) + 1j*np.mean(aimag,axis=0)
+    #sx = np.mean(sxfs,axis=0)
+    """
     for z in range(0,a):
-        tm3[z] = 0
-        tm3[len(Sxf)-z-1]=0  
+        sx[z] = 0
+        sx[len(Sxf)-z-1]=0  
+    """
     
-   
  
     tm = []
-    for v in tm3:
+    for v in sx:
         mag = math.sqrt(v.imag**2+v.real**2)
         tm.append(mag)
 
+
     za.append(tm)
 
+#za = np.array([[10,10,10]])
+
 za = np.array(za)
+
 print (za.shape)
 nx, ny = za.shape[1], za.shape[0]
-x = np.arange(0.5,-0.5,-1/nx)
-y = alph
+#x = np.arange(0.5,-0.5,-1/nx)
+#y = np.arange(0,0.01,0.1/ny)
+
+x = np.arange(nx)
+y = np.arange(ny)
 
 hf = plt.figure()
 ha = hf.add_subplot(111, projection='3d')
@@ -112,11 +129,15 @@ ha.set_xlabel('Frequency')
 ha.set_ylabel('Alpha')
 ha.set_zlabel('SCF')
 
+print("here")
 X, Y = numpy.meshgrid(x, y) 
-
+print("here2")
 ha.plot_surface(X, Y, za,rstride=1, cstride=1, cmap=cm.coolwarm,linewidth=0, antialiased=False)
+print("here3")
 plt.show()
-quit()
+
+
+"""
 
 print("Shape ",np.array(za).shape)
 plot.imshow(za,aspect='auto' ,cmap='hot')
@@ -127,4 +148,6 @@ myplot[1].set_xlabel('Freq (Hz)')
 myplot[1].set_ylabel('|Y(freq)|')
 
 plt.show()
+
+"""
 
